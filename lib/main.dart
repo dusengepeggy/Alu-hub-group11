@@ -25,7 +25,10 @@ class AluConnectApp extends StatelessWidget {
     return MaterialApp(
       title: 'ALU Connect',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark(),
+
+      // FIXED
+       theme: AppTheme.dark(),
+
       home: const AuthGate(),
     );
   }
@@ -38,10 +41,8 @@ class AuthGate extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
 
-    if (appState.isLoggedIn) {
-      return const HomeShell();
-    }
-
-    return const LoginScreen();
+    return appState.isLoggedIn
+        ? const HomeShell()
+        : const LoginScreen();
   }
 }
