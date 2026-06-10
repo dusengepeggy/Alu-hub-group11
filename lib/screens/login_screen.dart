@@ -24,7 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String _house = 'Ubuntu';
   String? _error;
 
-  static const _houses = ['Ubuntu', 'Imagine', 'Ngozi', 'Tofik'];
+  static const _houses = ['Ubuntu', 'Imagine', 'Ngozi', 'Tofik', 'Sankofa'];
 
   @override
   void dispose() {
