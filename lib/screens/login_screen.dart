@@ -1,132 +1,139 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../state/app_state.dart';
-import '../theme/app_theme.dart';
+class AppTheme {
+  static const Color navy = Color(0xFF0E1A2B);
+  static const Color navySurface = Color(0xFF16243A);
+  static const Color navyElevated = Color(0xFF1E3050);
+ 
+  static const Color gold = Color(0xFFF5B528);
+  static const Color goldDeep = Color(0xFFD99A1C);
 
-/// Onboarding entry point. Toggles between Login and Sign Up.
-/// Everyone who signs up becomes a Student — the foundation of the
-/// trust/access model. Demo accounts (see MockData) let graders log straight
-/// in as an organizer or admin:
-///   admin@alu.edu / kwame@alu.edu / liana@alu.edu  (any non-empty password)
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  static const Color textLight = Color(0xFFF3F5F8);
+  static const Color textMuted = Color(0xFF9AA8BC);
 
-  @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
+  static const Color sage = Color(0xFF6BA88F);
 
-class _LoginScreenState extends State<LoginScreen> {
-  bool _isLogin = true;
-  final _name = TextEditingController();
-  final _email = TextEditingController();
-  final _password = TextEditingController();
-  String _house = 'Ubuntu';
-  String? _error;
+  static ThemeData dark() {
+    final base = ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+    );
 
-  static const _houses = ['Ubuntu', 'Imagine', 'Ngozi', 'Tofik', 'Sankofa'];
+    return base.copyWith(
+      scaffoldBackgroundColor: navy,
 
-  @override
-  void dispose() {
-    _name.dispose();
-    _email.dispose();
-    _password.dispose();
-    super.dispose();
-  }
+      colorScheme: const ColorScheme.dark(
+        primary: gold,
+        secondary: sage,
+        surface: navySurface,
+        onPrimary: navy,
+        onSurface: textLight,
+      ),
 
-  void _submit() {
-    final state = context.read<AppState>();
-    final err = _isLogin
-        ? state.login(_email.text, _password.text)
-        : state.signUp(
-            name: _name.text,
-            email: _email.text,
-            house: _house,
-            password: _password.text,
-          );
-    setState(() => _error = err);
-    // On success the AuthGate swaps to HomeShell automatically.
-  }
+      textTheme: base.textTheme.apply(
+        bodyColor: textLight,
+        displayColor: textLight,
+      ),
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 24),
-                Text('ALU Connect',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineMedium
-                        ?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.gold,
-                        )),
-                const SizedBox(height: 6),
-                Text(
-                  _isLogin
-                      ? 'Welcome back.'
-                      : 'Join the trusted ALU community feed.',
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-                const SizedBox(height: 28),
-                if (!_isLogin) ...[
-                  TextField(
-                    controller: _name,
-                    decoration: const InputDecoration(labelText: 'Full name'),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: _house,
-                    decoration: const InputDecoration(labelText: 'House'),
-                    items: _houses
-                        .map((h) =>
-                            DropdownMenuItem(value: h, child: Text(h)))
-                        .toList(),
-                    onChanged: (v) => setState(() => _house = v ?? 'Ubuntu'),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                TextField(
-                  controller: _email,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _password,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Password'),
-                ),
-                if (_error != null) ...[
-                  const SizedBox(height: 12),
-                  Text(_error!,
-                      style: const TextStyle(color: Colors.red, fontSize: 13)),
-                ],
-                const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: _submit,
-                  child: Text(_isLogin ? 'Log in' : 'Create account'),
-                ),
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: () => setState(() {
-                    _isLogin = !_isLogin;
-                    _error = null;
-                  }),
-                  child: Text(_isLogin
-                      ? "New here? Create an account"
-                      : 'Already have an account? Log in'),
-                ),
-              ],
-            ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: navy,
+        foregroundColor: textLight,
+        centerTitle: false,
+        elevation: 0,
+      ),
+
+      cardTheme: CardThemeData(
+        color: navySurface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(
+            color: Color(0x1AFFFFFF),
           ),
         ),
+      ),
+
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: gold,
+          foregroundColor: navy,
+          padding: const EdgeInsets.symmetric(
+            vertical: 14,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          textStyle: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+          ),
+        ),
+      ),
+
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: navySurface,
+        indicatorColor: gold.withValues(alpha: 0.18),
+        labelTextStyle: const WidgetStatePropertyAll(
+          TextStyle(
+            fontSize: 11,
+            color: textMuted,
+          ),
+        ),
+      ),
+
+      chipTheme: base.chipTheme.copyWith(
+        backgroundColor: navyElevated,
+        selectedColor: gold,
+        labelStyle: const TextStyle(
+          color: textLight,
+        ),
+        secondaryLabelStyle: const TextStyle(
+          color: navy,
+        ),
+        side: BorderSide.none,
+      ),
+
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: navySurface,
+
+        hintStyle: const TextStyle(
+          color: textMuted,
+        ),
+
+        labelStyle: const TextStyle(
+          color: textMuted,
+        ),
+
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(
+            color: Color(0x1AFFFFFF),
+          ),
+        ),
+
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(
+            color: Color(0x1AFFFFFF),
+          ),
+        ),
+
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(
+            color: gold,
+            width: 2,
+          ),
+        ),
+      ),
+
+      dividerTheme: const DividerThemeData(
+        color: Color(0x1AFFFFFF),
+      ),
+
+      iconTheme: const IconThemeData(
+        color: textLight,
       ),
     );
   }
