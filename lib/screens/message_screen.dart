@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/message.dart';
 
@@ -9,35 +10,67 @@ class MessageScreen extends StatefulWidget {
 }
 
 class _MessageScreenState extends State<MessageScreen> {
-  final TextEditingController controller =
-      TextEditingController();
+  final List<Message> _messages = [];
 
-  final List<Message> messages = [
-    Message(
-      id: '1',
-      senderName: 'Peggy',
-      text: 'Welcome to ALU Connect!',
-      timestamp: DateTime.now(),
-    ),
+  Timer? _timer;
+
+  final List<String> autoMessages = [
+    'Welcome to ALU Connect!',
+    'A new opportunity has been posted.',
+    'Your application was received.',
+    'You have a new connection request.',
+    'A networking event starts tomorrow.',
+    'Check out the latest internships.',
   ];
 
-  void sendMessage() {
-    if (controller.text.trim().isEmpty) {
-      return;
-    }
+  int _messageIndex = 0;
 
-    setState(() {
-      messages.add(
-        Message(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          senderName: 'You',
-          text: controller.text.trim(),
-          timestamp: DateTime.now(),
-        ),
-      );
-    });
+  @override
+  void initState() {
+    super.initState();
 
-    controller.clear();
+    _messages.add(
+      Message(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        opportunityId: '', // Replace with actual opportunity ID if available
+        senderId: '', // Replace with actual sender ID if available
+        senderName: 'ALU Connect',
+        text: 'Welcome to ALU Connect! Start exploring opportunities and connecting with others.',
+        timestamp: DateTime.now(),
+      ),
+    );
+
+    _timer = Timer.periodic(
+      const Duration(seconds: 5),
+      (timer) {
+        if (!mounted) return;
+
+        setState(() {
+          _messages.add(
+            Message(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              opportunityId: '', // Replace with actual opportunity ID if available
+              senderId: '', // Replace with actual sender ID if available
+              senderName: 'ALU Connect',
+              text: autoMessages[_messageIndex % autoMessages.length],
+              timestamp: DateTime.now(),
+            ),
+          );
+
+          _messageIndex++;
+        });
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String _formatTime(DateTime time) {
+    return '${time.hour}:${time.minute.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -46,46 +79,26 @@ class _MessageScreenState extends State<MessageScreen> {
       appBar: AppBar(
         title: const Text('Messages'),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                final message = messages[index];
+      body: ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: _messages.length,
+        itemBuilder: (context, index) {
+          final message = _messages[index];
 
-                return ListTile(
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.person),
-                  ),
-                  title: Text(message.senderName),
-                  subtitle: Text(message.text),
-                );
-              },
+          return Card(
+            margin: const EdgeInsets.only(bottom: 10),
+            child: ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.message),
+              ),
+              title: Text(message.senderName),
+              subtitle: Text(message.text),
+              trailing: Text(
+                _formatTime(message.timestamp),
+              ),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: controller,
-                    decoration: const InputDecoration(
-                      hintText: 'Type a message...',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                IconButton(
-                  onPressed: sendMessage,
-                  icon: const Icon(Icons.send),
-                ),
-              ],
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
