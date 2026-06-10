@@ -7,8 +7,6 @@ import 'screens/login_screen.dart';
 import 'screens/home_shell.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-
   runApp(
     ChangeNotifierProvider(
       create: (_) => AppState()..loadSession(),
@@ -25,10 +23,7 @@ class AluConnectApp extends StatelessWidget {
     return MaterialApp(
       title: 'ALU Connect',
       debugShowCheckedModeBanner: false,
-
-      // FIXED
-       theme: AppTheme.dark(),
-
+      theme: AppTheme.dark(),
       home: const AuthGate(),
     );
   }
@@ -39,10 +34,12 @@ class AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appState = context.watch<AppState>();
+    final bool loggedIn = context.watch<AppState>().isLoggedIn;
 
-    return appState.isLoggedIn
-        ? const HomeShell()
-        : const LoginScreen();
+    if (loggedIn) {
+      return const HomeShell();
+    }
+
+    return const LoginScreen();
   }
 }
