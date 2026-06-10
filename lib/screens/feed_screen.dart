@@ -6,10 +6,6 @@ import '../models/opportunity.dart';
 import '../theme/app_theme.dart';
 import 'opportunity_detail_screen.dart';
 
-/// The dynamic feed of opportunities. This stub is intentionally functional
-/// so the app feels alive from day one. Your team's job is to make the cards
-/// beautiful (see TODOs) — extract the card into widgets/opportunity_card.dart
-/// for reusability points.
 class FeedScreen extends StatelessWidget {
   const FeedScreen({super.key});
 
@@ -19,19 +15,28 @@ class FeedScreen extends StatelessWidget {
     final feed = state.feed;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Opportunities')),
+      appBar: AppBar(
+        title: const Text('Opportunities'),
+      ),
       body: Column(
         children: [
-          _FilterBar(active: state.activeFilter, onSelect: state.setFilter),
+          _FilterBar(
+            active: state.activeFilter,
+            onSelect: state.setFilter,
+          ),
           Expanded(
             child: feed.isEmpty
-                // Empty-state handling (rubric: error handling / UX).
-                ? const Center(child: Text('No opportunities here yet.'))
+                ? const Center(
+                    child: Text('No opportunities here yet.'),
+                  )
                 : ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: feed.length,
-                    itemBuilder: (context, i) =>
-                        _OpportunityCard(opportunity: feed[i]),
+                    itemBuilder: (context, index) {
+                      return _OpportunityCard(
+                        opportunity: feed[index],
+                      );
+                    },
                   ),
           ),
         ],
@@ -43,7 +48,11 @@ class FeedScreen extends StatelessWidget {
 class _FilterBar extends StatelessWidget {
   final OpportunityType? active;
   final ValueChanged<OpportunityType?> onSelect;
-  const _FilterBar({required this.active, required this.onSelect});
+
+  const _FilterBar({
+    required this.active,
+    required this.onSelect,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -53,45 +62,70 @@ class _FilterBar extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         children: [
-          _chip(context, 'All', active == null, () => onSelect(null)),
-          ...OpportunityType.values.map((t) =>
-              _chip(context, t.label, active == t, () => onSelect(t))),
+          _chip(
+            context,
+            'All',
+            active == null,
+            () => onSelect(null),
+          ),
+          ...OpportunityType.values.map(
+            (type) => _chip(
+              context,
+              type.label,
+              active == type,
+              () => onSelect(type),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _chip(BuildContext c, String label, bool sel, VoidCallback onTap) {
+  Widget _chip(
+    BuildContext context,
+    String label,
+    bool selected,
+    VoidCallback onTap,
+  ) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 4,
+        vertical: 8,
+      ),
       child: ChoiceChip(
         label: Text(label),
-        selected: sel,
+        selected: selected,
         onSelected: (_) => onTap(),
       ),
     );
   }
 }
 
-/// TODO(team): redesign this card to be visually striking & consistent.
-/// Keep the verification badge prominent — it's our differentiator.
 class _OpportunityCard extends StatelessWidget {
   final Opportunity opportunity;
-  const _OpportunityCard({required this.opportunity});
+
+  const _OpportunityCard({
+    required this.opportunity,
+  });
 
   @override
   Widget build(BuildContext context) {
     final o = opportunity;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => OpportunityDetailScreen(opportunityId: o.id),
-          ),
-        ),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => OpportunityDetailScreen(
+                opportunityId: o.id,
+              ),
+            ),
+          );
+        },
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -99,31 +133,55 @@ class _OpportunityCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(o.type.icon, size: 18, color: AppTheme.gold),
+                  Icon(
+                    o.type.icon,
+                    size: 18,
+                    color: AppTheme.gold,
+                  ),
                   const SizedBox(width: 6),
-                  Text(o.type.label,
-                      style: const TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w600)),
+                  Text(
+                    o.type.label,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const Spacer(),
                   if (o.isVerified) const _VerifiedBadge(),
                 ],
               ),
               const SizedBox(height: 8),
-              Text(o.title,
-                  style: const TextStyle(
-                      fontSize: 17, fontWeight: FontWeight.bold)),
+              Text(
+                o.title,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 4),
-              Text('${o.posterName} · ${o.location}',
-                  style: const TextStyle(fontSize: 13, color: Colors.black54)),
+              Text(
+                '${o.posterName} · ${o.location}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.black54,
+                ),
+              ),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Icon(Icons.people_outline,
-                      size: 15, color: Colors.black45),
+                  const Icon(
+                    Icons.people_outline,
+                    size: 15,
+                    color: Colors.black45,
+                  ),
                   const SizedBox(width: 4),
-                  Text('${o.attendeeCount} going',
-                      style: const TextStyle(
-                          fontSize: 12, color: Colors.black45)),
+                  Text(
+                    '${o.attendeeCount} going',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black45,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -134,29 +192,37 @@ class _OpportunityCard extends StatelessWidget {
   }
 }
 
-/// The trust badge. TODO(team): consider distinct labels per poster type
-/// (e.g. "Verified Club" vs "Academic Team").
 class _VerifiedBadge extends StatelessWidget {
   const _VerifiedBadge();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 3,
+      ),
       decoration: BoxDecoration(
-        color: AppTheme.gold.withValues(alpha: 0.18),
+        color: AppTheme.gold.withOpacity(0.18),
         borderRadius: BorderRadius.circular(20),
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.verified, size: 14, color: AppTheme.navy),
+          Icon(
+            Icons.verified,
+            size: 14,
+            color: AppTheme.navy,
+          ),
           SizedBox(width: 4),
-          Text('Verified',
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.navy)),
+          Text(
+            'Verified',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.navy,
+            ),
+          ),
         ],
       ),
     );

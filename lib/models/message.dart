@@ -1,6 +1,6 @@
 class Message {
   final String id;
-  final String opportunityId;
+  final String opportunityId; // REQUIRED
   final String senderId;
   final String senderName;
   final String text;
