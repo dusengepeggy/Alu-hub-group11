@@ -8,6 +8,7 @@ import 'my_events_screen.dart';
 import 'create_opportunity_screen.dart';
 import 'admin_panel_screen.dart';
 import 'profile_screen.dart';
+import 'message_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -51,6 +52,11 @@ class _HomeShellState extends State<HomeShell> {
         const ProfileScreen(),
         Icons.person_outline,
         'Profile',
+      ),
+      _NavTab(
+        const MessageScreen(),
+        Icons.message_outlined,
+        'Messages',
       ),
     ];
 
