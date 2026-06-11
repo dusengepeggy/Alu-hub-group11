@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
-import '../models/opportunity.dart';
 import '../theme/app_theme.dart';
-import '../widgets/opportunity_meta.dart';
 
-/// Opportunity detail: full info, RSVP, save, and a per-event chat space.
 class OpportunityDetailScreen extends StatefulWidget {
   final String opportunityId;
   const OpportunityDetailScreen({super.key, required this.opportunityId});
@@ -17,266 +14,193 @@ class OpportunityDetailScreen extends StatefulWidget {
 }
 
 class _OpportunityDetailScreenState extends State<OpportunityDetailScreen> {
-  final _msgController = TextEditingController();
+  final _chatController = TextEditingController();
 
   @override
   void dispose() {
-    _msgController.dispose();
+    _chatController.dispose();
     super.dispose();
-  }
-
-  void _send(AppState state) {
-    final text = _msgController.text;
-    if (text.trim().isEmpty) return;
-    state.sendMessage(widget.opportunityId, text);
-    _msgController.clear();
   }
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final o = state.opportunityById(widget.opportunityId);
+
+    // Safe lookup across feed and myEvents
+    final o = [...state.feed, ...state.myEvents]
+        .cast<dynamic>()
+        .firstWhere((e) => e.id == widget.opportunityId, orElse: () => null);
+
     if (o == null) {
       return Scaffold(
-        appBar: AppBar(),
-        body: const Center(child: Text('This opportunity is no longer available.')),
+        appBar: AppBar(title: const Text('Details')),
+        body: const Center(child: Text('Opportunity not found.')),
       );
     }
 
     final messages = state.messagesFor(o.id);
-    final me = state.currentUser;
 
     return Scaffold(
-      appBar: AppBar(title: Text(o.type.label)),
+      appBar: AppBar(title: Text(o.title)),
       body: Column(
         children: [
+          // ── Detail + chat list ───────────────────────
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // Gradient banner header.
-                Container(
-                  height: 120,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
-                    gradient: LinearGradient(
-                      colors: o.type.gradient,
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  child: Center(
-                    child: Icon(o.type.icon,
-                        size: 44, color: Colors.white.withValues(alpha: 0.9)),
-                  ),
-                ),
-                const SizedBox(height: 14),
+                // type + verified badge
                 Row(
                   children: [
-                    OpportunityTypeChip(type: o.type),
+                    Icon(o.type.icon, color: AppTheme.gold, size: 18),
+                    const SizedBox(width: 6),
+                    Text(o.type.label,
+                        style: const TextStyle(
+                            color: AppTheme.gold, fontWeight: FontWeight.w600)),
                     const Spacer(),
-                    if (o.isVerified) const VerifiedBadge(),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  o.title,
-                  style: const TextStyle(
-                      fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-                if (o.organizer.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(o.organizer,
-                      style: const TextStyle(color: AppTheme.textMuted)),
-                ],
-                const SizedBox(height: 14),
-                _MetaRow(icon: Icons.event, text: formatDate(o.date)),
-                _MetaRow(icon: Icons.place_outlined, text: o.location),
-                if (o.applicationDeadline != null)
-                  _MetaRow(
-                    icon: Icons.timer_outlined,
-                    text: 'Deadline: ${formatDate(o.applicationDeadline!)}',
-                    color: const Color(0xFFE0823C),
-                  ),
-                _MetaRow(
-                  icon: Icons.people_outline,
-                  text: '${o.attendeeCount} going'
-                      '${o.interestedCount > 0 ? ' · ${o.interestedCount} interested' : ''}',
-                ),
-                if (o.teamSize != null || o.spotsAvailable != null)
-                  _MetaRow(
-                    icon: Icons.groups_outlined,
-                    text: [
-                      if (o.teamSize != null) 'Teams of ${o.teamSize}',
-                      if (o.spotsAvailable != null)
-                        '${o.spotsAvailable} spots',
-                    ].join(' · '),
-                  ),
-                const SizedBox(height: 16),
-                Text(o.description, style: const TextStyle(height: 1.5)),
-                if (o.skills.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  const Text('Skills',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final s in o.skills)
-                        Chip(
-                          label: Text(s),
-                          visualDensity: VisualDensity.compact,
+                    if (o.isVerified)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppTheme.gold.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                    ],
-                  ),
-                ],
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: () => state.toggleRsvp(o),
-                        icon: Icon(state.hasRsvped(o)
-                            ? Icons.check_circle
-                            : Icons.event_available_outlined),
-                        label: Text(state.hasRsvped(o) ? "RSVP'd" : 'RSVP'),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.verified, size: 13, color: AppTheme.navy),
+                            SizedBox(width: 4),
+                            Text('Verified',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.navy)),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    IconButton.outlined(
-                      onPressed: () => state.toggleSaved(o),
-                      icon: Icon(state.isSaved(o)
-                          ? Icons.bookmark
-                          : Icons.bookmark_border),
-                      color: state.isSaved(o) ? AppTheme.gold : null,
-                    ),
                   ],
                 ),
-                const Divider(height: 40),
-                const Text('Discussion',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
+
+                // title
+                Text(o.title,
+                    style: const TextStyle(
+                        fontSize: 22, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+
+                // poster, location, attendees
+                _infoRow(Icons.person_outline, o.posterName),
+                _infoRow(Icons.location_on_outlined, o.location),
+                _infoRow(Icons.people_outline, '${o.attendeeCount} going'),
+                const SizedBox(height: 16),
+
+                // description
+                Text(o.description,
+                    style: const TextStyle(fontSize: 15, height: 1.6)),
+                const SizedBox(height: 20),
+
+                // RSVP button
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => state.toggleRsvp(o),
+                    child:
+                        Text(state.hasRsvped(o) ? 'Cancel RSVP ✓' : 'RSVP'),
+                  ),
+                ),
+                const SizedBox(height: 28),
+
+                // discussion header
+                const Text('Discussion',
+                    style: TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 10),
+
+                // messages
                 if (messages.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: Center(
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
                       child: Text('No messages yet. Start the conversation!',
                           style: TextStyle(color: AppTheme.textMuted)),
                     ),
                   )
                 else
-                  for (final m in messages)
-                    _ChatBubble(
-                      senderName: m.senderName,
-                      text: m.text,
-                      isMine: m.senderId == me?.id,
-                    ),
+                  ...messages.map((msg) => Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.navyElevated,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(msg.senderName ?? 'Student',
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.gold)),
+                            const SizedBox(height: 4),
+                            Text(msg.text ?? '',
+                                style: const TextStyle(fontSize: 13)),
+                          ],
+                        ),
+                      )),
               ],
             ),
           ),
-          // Compose bar.
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _msgController,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _send(state),
-                      decoration: const InputDecoration(
-                        hintText: 'Message…',
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      ),
+
+          // ── Chat input ───────────────────────────────
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+            decoration: BoxDecoration(
+              color: AppTheme.navySurface,
+              border: Border(
+                  top: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _chatController,
+                    decoration: const InputDecoration(
+                      hintText: 'Write a message...',
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: () => _send(state),
-                    icon: const Icon(Icons.send),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () {
+                    final text = _chatController.text.trim();
+                    if (text.isEmpty) return;
+                    state.sendMessage(o.id, text);
+                    _chatController.clear();
+                  },
+                  icon: const Icon(Icons.send_rounded),
+                  color: AppTheme.gold,
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
-}
 
-class _MetaRow extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  final Color? color;
-  const _MetaRow({required this.icon, required this.text, this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: color ?? AppTheme.textMuted),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(text,
-                style: TextStyle(color: color ?? AppTheme.textMuted)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ChatBubble extends StatelessWidget {
-  final String senderName;
-  final String text;
-  final bool isMine;
-  const _ChatBubble({
-    required this.senderName,
-    required this.text,
-    required this.isMine,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        constraints: const BoxConstraints(maxWidth: 280),
-        decoration: BoxDecoration(
-          color: isMine ? AppTheme.gold : AppTheme.navyElevated,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(
-          crossAxisAlignment:
-              isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+  Widget _infoRow(IconData icon, String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Row(
           children: [
-            Text(
-              senderName,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: isMine ? AppTheme.navy : AppTheme.textMuted,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              text,
-              style: TextStyle(
-                  color: isMine ? AppTheme.navy : AppTheme.textLight),
-            ),
+            Icon(icon, size: 15, color: AppTheme.textMuted),
+            const SizedBox(width: 6),
+            Text(text,
+                style:
+                    const TextStyle(fontSize: 13, color: AppTheme.textMuted)),
           ],
         ),
-      ),
-    );
-  }
+      );
 }
