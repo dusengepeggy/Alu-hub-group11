@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../models/user.dart';
 import 'feed_screen.dart';
+import 'explore_screen.dart';
 import 'my_events_screen.dart';
 import 'create_opportunity_screen.dart';
 import 'admin_panel_screen.dart';
@@ -30,6 +31,7 @@ class _HomeShellState extends State<HomeShell> {
     // Build tabs based on role.
     final tabs = <_NavTab>[
       _NavTab(const FeedScreen(), Icons.explore_outlined, 'Feed'),
+      _NavTab(const ExploreScreen(), Icons.search_outlined, 'Explore'),
       _NavTab(const MyEventsScreen(), Icons.event_available_outlined, 'My Events'),
       if (role.canPost)
         _NavTab(const CreateOpportunityScreen(), Icons.add_circle_outline, 'Post'),
