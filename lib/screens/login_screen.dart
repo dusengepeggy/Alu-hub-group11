@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'home_shell.dart';
+import 'package:provider/provider.dart';
+
+import '../state/app_state.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -22,7 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void login() async {
+  void login() {
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill in all fields")),
@@ -32,14 +34,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => isLoading = true);
 
-    await Future.delayed(const Duration(seconds: 1)); // simulate login
+    // Real auth against AppState. Returns null on success, else an error.
+    final error = context.read<AppState>().login(
+          emailController.text,
+          passwordController.text,
+        );
 
     setState(() => isLoading = false);
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const HomeShell()),
-    );
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error)),
+      );
+      return;
+    }
+    // On success, pop back to the AuthGate root, which now shows HomeShell.
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   @override

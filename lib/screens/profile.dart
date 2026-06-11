@@ -1,9 +1,20 @@
 import 'package:flutter/material.dart';
-import '../models/profile.dart';
-import '../widgets/profile_cards.dart';
+import 'package:provider/provider.dart';
 
-// profile screen
-// controls profile viewing, editing, & settings
+import '../state/app_state.dart';
+import '../models/user.dart';
+import '../data/skill_options.dart';
+import '../theme/app_theme.dart';
+import '../widgets/profile_cards.dart';
+import '../widgets/opportunity_meta.dart';
+import '../widgets/screen_header.dart';
+import 'find_teammates_screen.dart';
+import 'saved_opportunities_screen.dart';
+import 'opportunity_detail_screen.dart';
+import 'welcome_screen.dart';
+
+/// Profile screen: identity card + stats, an About/RSVPs/Skills toggle, an
+/// edit mode and account settings. Backed entirely by real [AppState] data.
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -12,1160 +23,84 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  // control active profile section
   // 0 = About, 1 = RSVPs, 2 = Skills
   int _activeToggleIndex = 0;
 
-  // control bottom nav selection
-  // profile tab is active by default
-  int _currentNavIndex = 4;
+  // 'view' | 'edit' | 'settings'
+  String _viewMode = 'view';
 
-  // control current profile mode
-  // view = display profile
-  // edit = edit profile information
-  // settings = account settings
-  String _currentViewMode = 'view';
-
-  // controllers for editable profile fields
-  late TextEditingController _nameController;
-  late TextEditingController _courseController;
-  late TextEditingController _locationController;
-  late TextEditingController _bioController;
-
-  @override
-  void initState() {
-    super.initState();
-    // load initial profile info
-    final user = DummyProfileData.mockUser;
-    _nameController =
-        TextEditingController(text: user.name);
-    _courseController =
-        TextEditingController(text: user.course);
-    _locationController =
-        TextEditingController(text: user.location);
-    _bioController =
-        TextEditingController(text: user.bio);
-  }
+  final _nameController = TextEditingController();
+  final _locationController = TextEditingController();
+  final _bioController = TextEditingController();
 
   @override
   void dispose() {
-    // dispose controllers to prevent memory leaks
     _nameController.dispose();
-    _courseController.dispose();
     _locationController.dispose();
     _bioController.dispose();
     super.dispose();
   }
 
+  void _openEdit(User user) {
+    _nameController.text = user.name;
+    _locationController.text = user.campus;
+    _bioController.text = user.bio;
+    setState(() => _viewMode = 'edit');
+  }
+
+  void _save(AppState state) {
+    state.updateProfile(
+      name: _nameController.text,
+      bio: _bioController.text,
+      campus: _locationController.text,
+    );
+    setState(() => _viewMode = 'view');
+  }
+
   @override
   Widget build(BuildContext context) {
-    const scaffoldBg = Color(0xFF0F0E17);
-    const accentYellow = Color(0xFFFFB800);
-    const sidebarBg = Color(0xFF161422);
-    return Scaffold(
-      backgroundColor: scaffoldBg,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // responsive breakpoint:
-            // wide screens use sidebar + multi-column layout
-            // mobile uses single panel layout
-            final isWideScreen =
-                constraints.maxWidth > 768;
-            // determine content to display
-            Widget mainPanelContent;
-            if (_currentViewMode == 'settings') {
-              // display account settings
-              mainPanelContent =
-                  _buildSettingsPanel();
-            } else if (_currentViewMode == 'edit') {
-              // display profile editing
-              mainPanelContent =
-                  _buildEditPanel();
-            } else {
-              // display normal profile view
-              mainPanelContent = _MasterProfilePanel(
-                activeToggleIndex:
-                    _activeToggleIndex,
-                nameValue:
-                    _nameController.text,
-                courseValue:
-                    _courseController.text,
-                locationValue:
-                    _locationController.text,
-                bioValue:
-                    _bioController.text,
-                // update selected tab
-                onToggleChanged: (val) =>
-                    setState(() =>
-                        _activeToggleIndex = val),
-                // open edit
-                onEditTriggered: () =>
-                    setState(() =>
-                        _currentViewMode = 'edit'),
-                // open settings
-                onSettingsTriggered: () =>
-                    setState(() =>
-                        _currentViewMode = 'settings'),
-              );
-            }
+    final state = context.watch<AppState>();
+    final user = state.currentUser;
+    if (user == null) return const _LoggedOutPrompt();
 
-            if (isWideScreen) {
-              // desktop/tablet layout
-              return Row(
-                children: [
-                  // left nav sidebar
-                  Container(
-                    width: 72,
-                    color: sidebarBg,
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 24),
-                        _buildSidebarIcon(
-                          Icons.home_outlined,
-                          0,
-                        ),
-                        _buildSidebarIcon(
-                          Icons.work_outline,
-                          1,
-                        ),
-                        const Spacer(),
-                        // central create button
-                        _buildSidebarCenterButton(
-                          accentYellow,
-                        ),
-                        const Spacer(),
-                        _buildSidebarIcon(
-                          Icons.chat_bubble_outline,
-                          3,
-                        ),
-                        _buildSidebarIcon(
-                          Icons.person,
-                          4,
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                    ),
-                  ),
+    final Widget body;
+    if (_viewMode == 'settings') {
+      body = _buildSettingsPanel();
+    } else if (_viewMode == 'edit') {
+      body = _buildEditPanel(state);
+    } else {
+      body = _buildViewPanel(state, user);
+    }
 
-                  // main profile content
-                  SizedBox(
-                    width: 420,
-                    child: Container(
-                      decoration:
-                          const BoxDecoration(
-                        border: Border(
-                          right: BorderSide(
-                            color: Color(0xFF1E1B2E),
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                      child:
-                          mainPanelContent,
-                    ),
-                  ),
-
-                  // dummy analytics section for wider screens
-                  const Expanded(
-                    child: Center(
-                      child: Text(
-                        'Analytics View',
-                        style: TextStyle(
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            }
-
-            // show only main profile on mobile
-            return mainPanelContent;
-          },
-        ),
-      ),
-
-      // bottom nav on mobile
-      bottomNavigationBar:
-          MediaQuery.of(context).size.width <= 768
-              ? BottomNavigationBar(
-                  backgroundColor: scaffoldBg,
-                  type:
-                      BottomNavigationBarType.fixed,
-                  selectedItemColor:
-                      accentYellow,
-                  unselectedItemColor:
-                      Colors.grey,
-                  currentIndex:
-                      _currentNavIndex,
-                  onTap: (index) =>
-                      setState(() =>
-                          _currentNavIndex = index),
-                  selectedFontSize: 11,
-                  unselectedFontSize: 11,
-                  items: [
-                    const BottomNavigationBarItem(
-                      icon:
-                          Icon(Icons.home_outlined),
-                      label: 'Explore',
-                    ),
-                    const BottomNavigationBarItem(
-                      icon:
-                          Icon(Icons.work_outline),
-                      label: 'Discover',
-                    ),
-
-                    BottomNavigationBarItem(
-                      // center create button
-                      icon: Container(
-                        margin:
-                            const EdgeInsets.only(
-                                bottom: 4),
-                        padding:
-                            const EdgeInsets.all(6),
-                        decoration:
-                            BoxDecoration(
-                          color:
-                              accentYellow,
-                          borderRadius:
-                              BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.add_box_outlined,
-                          color:
-                              Colors.black,
-                          size: 20,
-                        ),
-                      ),
-                      label: '',
-                    ),
-                    const BottomNavigationBarItem(
-                      icon:
-                          Icon(Icons.chat_bubble_outline),
-
-                      label:
-                          'Chats',
-                    ),
-                    const BottomNavigationBarItem(
-                      icon:
-                          Icon(Icons.person),
-                      label:
-                          'Profile',
-                    ),
-                  ],
-                )
-              : null,
-    );
+    return Scaffold(body: SafeArea(child: body));
   }
-  // build account settings screen
-  // display profile-related settings actions
+
+  // ── Settings ───────────────────────────────────────
   Widget _buildSettingsPanel() {
     return Column(
-      crossAxisAlignment:
-          CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding:
-              const EdgeInsets.fromLTRB(
-            16.0,
-            24.0,
-            24.0,
-            16.0,
-          ),
-          child: Row(
-            children: [
-              // return to profile view
-              IconButton(
-                icon: const Icon(
-                  Icons.arrow_back,
-                  color: Colors.white,
-                ),
-                onPressed: () =>
-                    setState(() =>
-                        _currentViewMode = 'view'),
-              ),
-
-              const SizedBox(width: 8),
-
-              const Text(
-                'Settings',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight:
-                      FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
+        ScreenHeader(
+          title: 'Settings',
+          onBack: () => setState(() => _viewMode = 'view'),
         ),
-
-        Expanded(
-          child: ListView(
-            padding:
-                const EdgeInsets.symmetric(
-              horizontal: 24.0,
-            ),
-            children: const [
-              // privacy settings option
-              ActionMenuRow(
-                icon:
-                    Icons.lock_outline,
-                iconColor:
-                    Colors.grey,
-                title:
-                    'Account Privacy',
-                subtitle:
-                    'Manage visibility details',
-              ),
-              // notification settings option
-              ActionMenuRow(
-                icon:
-                    Icons.notifications_none,
-                iconColor:
-                    Colors.grey,
-                title:
-                    'Push Alerts',
-                subtitle:
-                    'Toggle ping sounds rules',
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // build profile editing screen
-  // allow users to update profile info
-  Widget _buildEditPanel() {
-    const accentYellow =
-        Color(0xFFFFB800);
-    return Column(
-      crossAxisAlignment:
-          CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding:
-              const EdgeInsets.fromLTRB(
-            16.0,
-            24.0,
-            24.0,
-            16.0,
-          ),
-          child: Row(
-            mainAxisAlignment:
-                MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  // close edit mode
-                  IconButton(
-                    icon:
-                        const Icon(
-                      Icons.close,
-                      color:
-                          Colors.white,
-                    ),
-                    onPressed: () =>
-                        setState(() =>
-                            _currentViewMode =
-                                'view'),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Edit Profile',
-                    style:
-                        TextStyle(
-                      color:
-                          Colors.white,
-                      fontSize:
-                          22,
-                      fontWeight:
-                          FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-
-              // save changes button
-              TextButton(
-                onPressed: () =>
-                    setState(() =>
-                        _currentViewMode =
-                            'view'),
-                child:
-                    const Text(
-                  'SAVE',
-                  style:
-                      TextStyle(
-                    color:
-                        accentYellow,
-                    fontWeight:
-                        FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        Expanded(
-          child: ListView(
-            padding:
-                const EdgeInsets.symmetric(
-              horizontal: 24.0,
-            ),
-            children: [
-              // editable profile fields
-              EditableTextField(
-                label:
-                    'Full Name',
-                controller:
-                    _nameController,
-              ),
-              EditableTextField(
-                label:
-                    'Degree Course Title',
-                controller:
-                    _courseController,
-              ),
-              EditableTextField(
-                label:
-                    'Location Domain',
-                controller:
-                    _locationController,
-              ),
-              EditableTextField(
-                label:
-                    'Personal Summary Bio Statement',
-                controller:
-                    _bioController,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // build sidebar nav icons
-  // highlights selected section
-  Widget _buildSidebarIcon(
-      IconData icon,
-      int index,
-  ) {
-    return IconButton(
-      icon: Icon(
-        icon,
-        color:
-            _currentNavIndex == index
-                ? const Color(0xFFFFB800)
-                : Colors.grey,
-        size:
-            24,
-      ),
-      onPressed: () =>
-          setState(() =>
-              _currentNavIndex =
-                  index),
-    );
-  }
-
-  // build create button
-  Widget _buildSidebarCenterButton(
-      Color color,
-  ) {
-    return Container(
-      padding:
-          const EdgeInsets.all(8),
-      decoration:
-          BoxDecoration(
-        color:
-            color,
-        borderRadius:
-            BorderRadius.circular(8),
-      ),
-      child:
-          const Icon(
-        Icons.add_box_outlined,
-        color:
-            Colors.black,
-        size:
-            22,
-      ),
-    );
-  }
-}
-
-// main profile content
-// display user details, statistics, tabs, skills, RSVPs, & actions
-class _MasterProfilePanel extends StatelessWidget {
-  final int activeToggleIndex;
-  final String nameValue;
-  final String courseValue;
-  final String locationValue;
-  final String bioValue;
-  final ValueChanged<int> onToggleChanged;
-  final VoidCallback onEditTriggered;
-  final VoidCallback onSettingsTriggered;
-
-  const _MasterProfilePanel({
-    required this.activeToggleIndex,
-    required this.nameValue,
-    required this.courseValue,
-    required this.locationValue,
-    required this.bioValue,
-    required this.onToggleChanged,
-    required this.onEditTriggered,
-    required this.onSettingsTriggered,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const cardBg =
-        Color(0xFF1E1B2E);
-    const accentYellow =
-        Color(0xFFFFB800);
-    const signOutRedBg =
-        Color(0xFF2D1418);
-    const signOutRedText =
-        Color(0xFFFF4D5E);
-    // retrieve mock data
-    final user =
-        DummyProfileData.mockUser;
-    return Column(
-      crossAxisAlignment:
-          CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding:
-              const EdgeInsets.fromLTRB(
-            24.0,
-            24.0,
-            24.0,
-            16.0,
-          ),
-          child: Row(
-            mainAxisAlignment:
-                MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Profile',
-                style:
-                    TextStyle(
-                  color:
-                      Colors.white,
-                  fontSize:
-                      26,
-                  fontWeight:
-                      FontWeight.bold,
-                ),
-              ),
-              Row(
-                children: [
-                  IconButton(
-                    icon:
-                        const Icon(
-                      Icons.notifications_none,
-                      color:
-                          Colors.white,
-                      size:
-                          22,
-                    ),
-                    onPressed: () {},
-                  ),
-                  IconButton(
-                    icon:
-                        const Icon(
-                      Icons.settings_outlined,
-                      color:
-                          Colors.white,
-                      size:
-                          22,
-                    ),
-                    onPressed:
-                        onSettingsTriggered,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: ScrollConfiguration(
-            behavior: ScrollConfiguration.of(context)
-                .copyWith(scrollbars: false),
-            child: ListView(
-              padding:
-                  const EdgeInsets.symmetric(
-                horizontal: 24.0,
-              ),
+        const Expanded(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
               children: [
-                // main profile info card
-                Container(
-                  padding:
-                      const EdgeInsets.all(20),
-                  decoration:
-                      BoxDecoration(
-                    color:
-                        cardBg,
-                    borderRadius:
-                        BorderRadius.circular(20),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                        children: [
-                          // edit button avatar
-                          Stack(
-                            alignment:
-                                Alignment.bottomRight,
-                            children: [
-                              Container(
-                                width:
-                                    80,
-                                height:
-                                    80,
-                                decoration:
-                                    BoxDecoration(
-                                  color:
-                                      user.avatarColor,
-                                  borderRadius:
-                                      BorderRadius.circular(20),
-                                ),
-                                alignment:
-                                    Alignment.center,
-                                child:
-                                    Text(
-                                  user.initials,
-                                  style:
-                                      const TextStyle(
-                                    color:
-                                        Colors.black,
-                                    fontSize:
-                                        24,
-                                    fontWeight:
-                                        FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-
-                              // Opens edit mode.
-                              GestureDetector(
-                                onTap:
-                                    onEditTriggered,
-                                child: Container(
-                                  padding:
-                                      const EdgeInsets.all(4),
-                                  decoration:
-                                      const BoxDecoration(
-                                    color:
-                                        Color(0xFF2C2A3A),
-                                    shape:
-                                        BoxShape.circle,
-                                  ),
-                                  child:
-                                      const Icon(
-                                    Icons.edit,
-                                    color:
-                                        Colors.white,
-                                    size:
-                                        12,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(width: 16),
-
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  nameValue,
-                                  style:
-                                      const TextStyle(
-                                    color:
-                                        Colors.white,
-                                    fontSize:
-                                        20,
-                                    fontWeight:
-                                        FontWeight.bold,
-                                  ),
-                                ),
-
-                                const SizedBox(height: 4),
-
-                                Text(
-                                  courseValue,
-                                  style:
-                                      TextStyle(
-                                    color:
-                                        Colors.white
-                                            .withOpacity(0.7),
-                                    fontSize:
-                                        13,
-                                  ),
-                                ),
-
-                                const SizedBox(height: 2),
-
-                                Text(
-                                  '$locationValue • ${user.year}',
-                                  style:
-                                      const TextStyle(
-                                    color:
-                                        Colors.grey,
-                                    fontSize:
-                                        12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const Padding(
-                        padding:
-                            EdgeInsets.symmetric(
-                          vertical: 16.0,
-                        ),
-                        child:
-                            Divider(
-                          color:
-                              Colors.white10,
-                          height:
-                              1,
-                        ),
-                      ),
-
-                      // Profile statistics.
-                      Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment.spaceAround,
-                        children: [
-                          MetricItem(
-                            value:
-                                '${user.metrics.rsvps}',
-                            label:
-                                'RSVPs',
-                          ),
-                          MetricItem(
-                            value:
-                                '${user.metrics.network}',
-                            label:
-                                'Network',
-                          ),
-                          MetricItem(
-                            value:
-                                '${user.metrics.skills}',
-                            label:
-                                'Skills',
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                ActionMenuRow(
+                  icon: Icons.lock_outline,
+                  iconColor: AppTheme.textMuted,
+                  title: 'Account Privacy',
+                  subtitle: 'Manage visibility details',
                 ),
-
-                const SizedBox(height: 20),
-                // profile section selector
-                Container(
-                  padding:
-                      const EdgeInsets.all(4),
-                  decoration:
-                      BoxDecoration(
-                    color:
-                        cardBg,
-                    borderRadius:
-                        BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      _buildTabToggle(
-                        0,
-                        'About',
-                        accentYellow,
-                      ),
-                      _buildTabToggle(
-                        1,
-                        'RSVPs (${user.metrics.rsvps})',
-                        accentYellow,
-                      ),
-                      _buildTabToggle(
-                        2,
-                        'Skills',
-                        accentYellow,
-                      ),
-                    ],
-                  ),
+                ActionMenuRow(
+                  icon: Icons.notifications_none,
+                  iconColor: AppTheme.textMuted,
+                  title: 'Push Alerts',
+                  subtitle: 'Toggle ping sounds rules',
                 ),
-
-                const SizedBox(height: 20),
-                // about section
-                if (activeToggleIndex == 0) ...[
-                  Container(
-                    padding:
-                        const EdgeInsets.all(16),
-                    decoration:
-                        BoxDecoration(
-                      color:
-                          cardBg,
-                      borderRadius:
-                          BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Bio',
-                              style:
-                                  TextStyle(
-                                color:
-                                    Colors.white,
-                                fontSize:
-                                    15,
-                                fontWeight:
-                                    FontWeight.bold,
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap:
-                                  onEditTriggered,
-                              child:
-                                  Icon(
-                                Icons.edit_outlined,
-                                color:
-                                    Colors.white
-                                        .withOpacity(0.6),
-                                size:
-                                    16,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        Text(
-                          bioValue,
-                          style:
-                              TextStyle(
-                            color:
-                                Colors.white
-                                    .withOpacity(0.8),
-                            fontSize:
-                                13,
-                            height:
-                                1.4,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // team searching skills
-                  Container(
-                    padding:
-                        const EdgeInsets.all(16),
-                    decoration:
-                        BoxDecoration(
-                      color:
-                          cardBg,
-                      borderRadius:
-                          BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Looking for teammates in',
-                          style:
-                              TextStyle(
-                            color:
-                                Colors.white,
-                            fontSize:
-                                15,
-                            fontWeight:
-                                FontWeight.bold,
-                          ),
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        Wrap(
-                          spacing:
-                              8,
-                          runSpacing:
-                              8,
-                          children: const [
-                            CustomChip(
-                              label:
-                                  'Backend Dev',
-                              textColor:
-                                  Color(0xFFB080FF),
-                              borderColor:
-                                  Color(0xFF6236FF),
-                            ),
-                            CustomChip(
-                              label:
-                                  'Product Manager',
-                              textColor:
-                                  Color(0xFF50B3FF),
-                              borderColor:
-                                  Color(0xFF0091FF),
-                            ),
-                            CustomChip(
-                              label:
-                                  'Designer',
-                              textColor:
-                                  Color(0xFF33CC99),
-                              borderColor:
-                                  Color(0xFF00B27A),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  const ActionMenuRow(
-                    icon:
-                        Icons.bookmark_outline,
-                    iconColor:
-                        accentYellow,
-                    title:
-                        'My RSVPs',
-                    subtitle:
-                        '3 events & opportunities',
-                  ),
-
-                  const ActionMenuRow(
-                    icon:
-                        Icons.people_outline,
-                    iconColor:
-                        Color(0xFF0091FF),
-                    title:
-                        'Find Teammates',
-                    subtitle:
-                        'Skill-based matching',
-                  ),
-
-                  const ActionMenuRow(
-                    icon:
-                        Icons.star_border_outlined,
-                    iconColor:
-                        Color(0xFFFFB800),
-                    title:
-                        'Saved Opportunities',
-                    subtitle:
-                        'Bookmarked posts',
-                  ),
-                ],
-
-                // RSVP section
-                if (activeToggleIndex == 1) ...[
-                  ...DummyProfileData.mockRsvps.map(
-                    (event) {
-                      return RsvpEventCard(
-                        title:
-                            event.title,
-                        dateText:
-                            event.dateText,
-                      );
-                    },
-                  ).toList(),
-                ],
-
-                // skills section
-                if (activeToggleIndex == 2) ...[
-                  Container(
-                    padding:
-                        const EdgeInsets.all(16),
-                    decoration:
-                        BoxDecoration(
-                      color:
-                          cardBg,
-                      borderRadius:
-                          BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Your Skills',
-                          style:
-                              TextStyle(
-                            color:
-                                Colors.white,
-                            fontSize:
-                                15,
-                            fontWeight:
-                                FontWeight.bold,
-                          ),
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        Wrap(
-                          spacing:
-                              8,
-                          runSpacing:
-                              8,
-                          children: [
-                            ...DummyProfileData.mockSkills
-                                .map((skill) {
-                              return CustomChip(
-                                label:
-                                    skill['name'],
-                                textColor:
-                                    (skill['color'] as Color)
-                                        .withOpacity(0.8),
-                                borderColor:
-                                    skill['color'],
-                              );
-                            }),
-                            DottedAddChip(
-                              label:
-                                  'Add skill',
-                              onTap:
-                                  () {},
-                            ),
-                          ],
-                        ),
-
-                        const Padding(
-                          padding:
-                              EdgeInsets.symmetric(
-                            vertical: 16.0,
-                          ),
-                          child:
-                              Divider(
-                            color:
-                                Colors.white10,
-                            height:
-                                1,
-                          ),
-                        ),
-
-                        const Text(
-                          'Seeking (for teamwork)',
-                          style:
-                              TextStyle(
-                            color:
-                                Colors.white,
-                            fontSize:
-                                15,
-                            fontWeight:
-                                FontWeight.bold,
-                          ),
-                        ),
-
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing:
-                              8,
-                          runSpacing:
-                              8,
-                          children:
-                              DummyProfileData
-                                  .mockSeekingTags
-                                  .map((tag) {
-                            return CustomChip(
-                              label:
-                                  tag,
-                              textColor:
-                                  Colors.grey,
-                              borderColor:
-                                  Colors.white10,
-                            );
-                          }).toList(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 12),
-                // sign out button
-                InkWell(
-                  onTap:
-                      () {},
-                  borderRadius:
-                      BorderRadius.circular(16),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.all(16),
-                    decoration:
-                        BoxDecoration(
-                      color:
-                          signOutRedBg,
-                      borderRadius:
-                          BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding:
-                              const EdgeInsets.all(8),
-                          decoration:
-                              BoxDecoration(
-                            color:
-                                Colors.white
-                                    .withOpacity(0.02),
-                            borderRadius:
-                                BorderRadius.circular(8),
-                          ),
-                          child:
-                              const Icon(
-                            Icons.logout_outlined,
-                            color:
-                                signOutRedText,
-                            size:
-                                20,
-                          ),
-                        ),
-
-                        const SizedBox(width: 16),
-
-                        const Text(
-                          'Sign Out',
-                          style:
-                              TextStyle(
-                            color:
-                                signOutRedText,
-                            fontSize:
-                                15,
-                            fontWeight:
-                                FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 32),
               ],
             ),
           ),
@@ -1174,49 +109,451 @@ class _MasterProfilePanel extends StatelessWidget {
     );
   }
 
-  // build About/ RSVP/Skills tab buttons
-  Widget _buildTabToggle(
-      int index,
-      String title,
-      Color activeColor,
-  ) {
-    final isSelected =
-        activeToggleIndex == index;
+  // ── Edit ───────────────────────────────────────────
+  Widget _buildEditPanel(AppState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ScreenHeader(
+          title: 'Edit Profile',
+          onBack: () => setState(() => _viewMode = 'view'),
+          trailing: TextButton(
+            onPressed: () => _save(state),
+            child: const Text('SAVE',
+                style: TextStyle(
+                    color: AppTheme.gold, fontWeight: FontWeight.bold)),
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            children: [
+              EditableTextField(
+                  label: 'Full Name', controller: _nameController),
+              EditableTextField(
+                  label: 'Campus / Location',
+                  controller: _locationController),
+              EditableTextField(
+                  label: 'Bio', controller: _bioController, maxLines: 4),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── View ───────────────────────────────────────────
+  Widget _buildViewPanel(AppState state, User user) {
+    final location = user.campus.isNotEmpty ? user.campus : user.house;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ScreenHeader(
+          title: 'Profile',
+          trailing: IconButton(
+            icon: const Icon(Icons.settings_outlined, color: AppTheme.textLight),
+            onPressed: () => setState(() => _viewMode = 'settings'),
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            children: [
+              // identity card
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppTheme.navySurface,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Stack(
+                          alignment: Alignment.bottomRight,
+                          children: [
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                color: AppTheme.gold,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                user.initials,
+                                style: const TextStyle(
+                                    color: AppTheme.navy,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () => _openEdit(user),
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                    color: AppTheme.navyElevated,
+                                    shape: BoxShape.circle),
+                                child: const Icon(Icons.edit,
+                                    color: AppTheme.textLight, size: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(user.name,
+                                  style: const TextStyle(
+                                      color: AppTheme.textLight,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 4),
+                              Text(location,
+                                  style: const TextStyle(
+                                      color: AppTheme.textMuted, fontSize: 13)),
+                              const SizedBox(height: 2),
+                              Text(user.email,
+                                  style: const TextStyle(
+                                      color: AppTheme.textMuted, fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Divider(color: Colors.white10, height: 1),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        MetricItem(
+                            value: '${state.myEvents.length}', label: 'RSVPs'),
+                        MetricItem(
+                            value: '${state.otherUsers.length}',
+                            label: 'Network'),
+                        MetricItem(
+                            value: '${user.skills.length}', label: 'Skills'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+              // toggle
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: AppTheme.navySurface,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    _tabToggle(0, 'About'),
+                    _tabToggle(1, 'RSVPs (${state.myEvents.length})'),
+                    _tabToggle(2, 'Skills'),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+              if (_activeToggleIndex == 0) ..._aboutTab(state, user),
+              if (_activeToggleIndex == 1) ..._rsvpsTab(state),
+              if (_activeToggleIndex == 2) ..._skillsTab(state, user),
+
+              const SizedBox(height: 12),
+              // sign out
+              InkWell(
+                onTap: state.logout,
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.logout_outlined,
+                          color: Colors.redAccent, size: 20),
+                      SizedBox(width: 16),
+                      Text('Sign Out',
+                          style: TextStyle(
+                              color: Colors.redAccent,
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── About tab ───────────────────────────────────────
+  List<Widget> _aboutTab(AppState state, User user) {
+    return [
+      _card(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Bio',
+                    style: TextStyle(
+                        color: AppTheme.textLight,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold)),
+                GestureDetector(
+                  onTap: () => _openEdit(user),
+                  child: const Icon(Icons.edit_outlined,
+                      color: AppTheme.textMuted, size: 16),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              user.bio.isNotEmpty ? user.bio : 'No bio yet. Tap edit to add one.',
+              style: const TextStyle(
+                  color: AppTheme.textLight, fontSize: 13, height: 1.4),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 20),
+      if (user.seekingRoles.isNotEmpty) ...[
+        _card(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Looking for teammates in',
+                  style: TextStyle(
+                      color: AppTheme.textLight,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final r in user.seekingRoles)
+                    CustomChip(
+                        label: r,
+                        textColor: AppTheme.gold,
+                        borderColor: AppTheme.gold),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+      ],
+      ActionMenuRow(
+        icon: Icons.bookmark_outline,
+        iconColor: AppTheme.gold,
+        title: 'My RSVPs',
+        subtitle: '${state.myEvents.length} events & opportunities',
+        onTap: () => setState(() => _activeToggleIndex = 1),
+      ),
+      ActionMenuRow(
+        icon: Icons.people_outline,
+        iconColor: AppTheme.sage,
+        title: 'Find Teammates',
+        subtitle: 'Skill-based matching',
+        onTap: () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const FindTeammatesScreen())),
+      ),
+      ActionMenuRow(
+        icon: Icons.star_border_outlined,
+        iconColor: AppTheme.gold,
+        title: 'Saved Opportunities',
+        subtitle: '${state.savedOpportunities.length} bookmarked',
+        onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const SavedOpportunitiesScreen())),
+      ),
+    ];
+  }
+
+  // ── RSVPs tab ───────────────────────────────────────
+  List<Widget> _rsvpsTab(AppState state) {
+    final events = state.myEvents;
+    if (events.isEmpty) {
+      return [
+        const Padding(
+          padding: EdgeInsets.only(top: 32),
+          child: Center(
+            child: Text("You haven't RSVP'd to anything yet.",
+                style: TextStyle(color: AppTheme.textMuted)),
+          ),
+        ),
+      ];
+    }
+    return [
+      for (final o in events)
+        RsvpEventCard(
+          title: o.title,
+          dateText: formatDate(o.date),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => OpportunityDetailScreen(opportunityId: o.id)),
+          ),
+        ),
+    ];
+  }
+
+  // ── Skills tab ──────────────────────────────────────
+  List<Widget> _skillsTab(AppState state, User user) {
+    return [
+      _card(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Your Skills',
+                style: TextStyle(
+                    color: AppTheme.textLight,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final s in user.skills)
+                  Chip(
+                    label: Text(s),
+                    onDeleted: () => state.updateSkills(
+                        user.skills.where((x) => x != s).toList()),
+                  ),
+                DottedAddChip(
+                  label: 'Add skill',
+                  onTap: () => _addFromOptions(
+                    title: 'Add a skill',
+                    options: SkillOptions.skills,
+                    existing: user.skills,
+                    onPick: (v) =>
+                        state.updateSkills([...user.skills, v]),
+                  ),
+                ),
+              ],
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Divider(color: Colors.white10, height: 1),
+            ),
+            const Text('Seeking (for teamwork)',
+                style: TextStyle(
+                    color: AppTheme.textLight,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final r in user.seekingRoles)
+                  Chip(
+                    label: Text(r),
+                    onDeleted: () => state.setSeekingRoles(
+                        user.seekingRoles.where((x) => x != r).toList()),
+                  ),
+                DottedAddChip(
+                  label: 'Add role',
+                  onTap: () => _addFromOptions(
+                    title: 'Add a role you seek',
+                    options: SkillOptions.teammateRoles,
+                    existing: user.seekingRoles,
+                    onPick: (v) =>
+                        state.setSeekingRoles([...user.seekingRoles, v]),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ];
+  }
+
+  void _addFromOptions({
+    required String title,
+    required List<String> options,
+    required List<String> existing,
+    required ValueChanged<String> onPick,
+  }) {
+    final remaining = options.where((o) => !existing.contains(o)).toList();
+    showModalBottomSheet(
+      context: context,
+      builder: (sheetCtx) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(title,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            if (remaining.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('Nothing left to add.'),
+              ),
+            for (final o in remaining)
+              ListTile(
+                title: Text(o),
+                onTap: () {
+                  onPick(o);
+                  Navigator.pop(sheetCtx);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _card({required Widget child}) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.navySurface,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: child,
+      );
+
+  Widget _tabToggle(int index, String title) {
+    final isSelected = _activeToggleIndex == index;
     return Expanded(
       child: GestureDetector(
-        onTap: () =>
-            onToggleChanged(index),
+        onTap: () => setState(() => _activeToggleIndex = index),
         child: Container(
-          padding:
-              const EdgeInsets.symmetric(
-            vertical: 10,
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? AppTheme.gold : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
           ),
-          decoration:
-              BoxDecoration(
-            color:
-                isSelected
-                    ? activeColor
-                    : Colors.transparent,
-            borderRadius:
-                BorderRadius.circular(10),
-          ),
-          alignment:
-              Alignment.center,
-          child:
-              Text(
+          alignment: Alignment.center,
+          child: Text(
             title,
-            style:
-                TextStyle(
-              color:
-                  isSelected
-                      ? Colors.black
-                      : Colors.grey,
-              fontSize:
-                  13,
-              fontWeight:
-                  isSelected
-                      ? FontWeight.bold
-                      : FontWeight.normal,
+            style: TextStyle(
+              color: isSelected ? AppTheme.navy : AppTheme.textMuted,
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
           ),
         ),
@@ -1225,3 +562,30 @@ class _MasterProfilePanel extends StatelessWidget {
   }
 }
 
+class _LoggedOutPrompt extends StatelessWidget {
+  const _LoggedOutPrompt();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.account_circle_outlined, size: 64),
+            const SizedBox(height: 12),
+            const Text("You're not signed in.",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+              ),
+              child: const Text('Sign In'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

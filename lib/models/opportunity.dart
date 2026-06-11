@@ -48,6 +48,32 @@ extension OpportunityTypeInfo on OpportunityType {
         return Icons.campaign_outlined;
     }
   }
+
+  /// A distinct accent colour per type — used for the type chip/badge.
+  Color get accent {
+    switch (this) {
+      case OpportunityType.event:
+        return const Color(0xFFE0823C); // warm orange
+      case OpportunityType.hackathon:
+        return const Color(0xFF8B6BE8); // violet
+      case OpportunityType.workshop:
+        return const Color(0xFF3CA6E0); // blue
+      case OpportunityType.internship:
+        return const Color(0xFF6BA88F); // sage green
+      case OpportunityType.startup:
+        return const Color(0xFFE05C7E); // pink
+      case OpportunityType.leadership:
+        return const Color(0xFFF5B528); // gold
+      case OpportunityType.announcement:
+        return const Color(0xFF9AA8BC); // muted
+    }
+  }
+
+  /// A two-colour gradient used for card "banner" headers (no image assets).
+  List<Color> get gradient {
+    final base = accent;
+    return [base.withValues(alpha: 0.85), base.withValues(alpha: 0.45)];
+  }
 }
 
 class Opportunity {
@@ -59,6 +85,22 @@ class Opportunity {
   final String location;
   final String posterId;
   final String posterName;
+
+  /// Organising body / company (e.g. "ALU Innovation Lab", "Flutterwave").
+  final String organizer;
+
+  /// Skills relevant to this opportunity (used in discovery + matching).
+  final List<String> skills;
+
+  /// Optional application deadline (e.g. internships).
+  final DateTime? applicationDeadline;
+
+  /// Optional team / capacity hints.
+  final int? teamSize;
+  final int? spotsAvailable;
+
+  /// Lightweight "interested" signal, separate from confirmed RSVPs.
+  final int interestedCount;
 
   final bool isVerified;
 
@@ -77,10 +119,17 @@ class Opportunity {
     required this.location,
     required this.posterId,
     required this.posterName,
+    this.organizer = '',
+    List<String>? skills,
+    this.applicationDeadline,
+    this.teamSize,
+    this.spotsAvailable,
+    this.interestedCount = 0,
     this.isVerified = true,
     Set<String>? attendees,
     this.isFlagged = false,
-  }) : attendees = attendees ?? <String>{};
+  })  : skills = skills ?? <String>[],
+        attendees = attendees ?? <String>{};
 
   int get attendeeCount => attendees.length;
 }

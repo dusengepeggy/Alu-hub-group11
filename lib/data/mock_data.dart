@@ -1,7 +1,6 @@
 import '../models/user.dart';
 import '../models/opportunity.dart';
 import '../models/message.dart';
-import '../models/organizer_request.dart';
 
 /// Seed data used to populate the app on first launch. Because the brief
 /// allows mock data, this lets us demo a lively, realistic feed without a
@@ -11,26 +10,32 @@ class MockData {
         User(
           id: 'u_admin',
           name: 'Amara Okeke',
-          email: 'admin@alu.edu',
+          email: 'amara@alustudent.com',
           house: 'Ubuntu',
+          campus: 'Kigali, Rwanda',
           bio: 'Student Life coordinator. Keeps the feed trustworthy.',
-          role: UserRole.admin,
+          skills: ['Operations', 'Community', 'Public Speaking'],
         ),
         User(
           id: 'u_org',
           name: 'Kwame Mensah',
-          email: 'kwame@alu.edu',
+          email: 'kwame@alustudent.com',
           house: 'Imagine',
+          campus: 'Kigali, Rwanda',
           bio: 'President, ALU Robotics Club.',
-          role: UserRole.organizer,
+          skills: ['Python', 'Machine Learning', 'Flutter'],
         ),
         User(
           id: 'u_student',
           name: 'Liana Uwase',
-          email: 'liana@alu.edu',
+          email: 'liana@alustudent.com',
           house: 'Ubuntu',
-          bio: 'Second-year, interested in product design.',
-          role: UserRole.student,
+          campus: 'Kigali, Rwanda',
+          bio: 'Passionate about building tech for Africa. '
+              'Love hackathons and impact-driven startups.',
+          skills: ['UI/UX', 'Figma', 'Product Management'],
+          seekingRoles: ['Backend Dev', 'Product Manager', 'Designer'],
+          lookingForTeammates: true,
         ),
       ];
 
@@ -45,6 +50,11 @@ class MockData {
               'top three teams.',
           date: DateTime.now().add(const Duration(days: 6)),
           location: 'Innovation Hub, Kigali Campus',
+          organizer: 'ALU Innovation Lab',
+          skills: ['Python', 'Flutter', 'UI/UX', 'Machine Learning'],
+          teamSize: 5,
+          spotsAvailable: 40,
+          interestedCount: 89,
           posterId: 'u_org',
           posterName: 'Kwame Mensah',
           attendees: {'u_student'},
@@ -58,6 +68,10 @@ class MockData {
               'screen. Bring a laptop. Beginner friendly.',
           date: DateTime.now().add(const Duration(days: 2)),
           location: 'Lab 2B',
+          organizer: 'ALU Design Club',
+          skills: ['Figma', 'UI/UX', 'Flutter'],
+          spotsAvailable: 25,
+          interestedCount: 34,
           posterId: 'u_org',
           posterName: 'Kwame Mensah',
         ),
@@ -70,6 +84,10 @@ class MockData {
               'Applications close in two weeks.',
           date: DateTime.now().add(const Duration(days: 14)),
           location: 'Remote',
+          organizer: 'Flutterwave',
+          skills: ['SQL', 'Python', 'Data Analysis'],
+          applicationDeadline: DateTime.now().add(const Duration(days: 19)),
+          interestedCount: 209,
           posterId: 'u_admin',
           posterName: 'Amara Okeke',
         ),
@@ -82,6 +100,9 @@ class MockData {
               'servant leadership. Dinner provided.',
           date: DateTime.now().add(const Duration(days: 4)),
           location: 'Dining Hall',
+          organizer: 'ALU Student Government',
+          skills: ['Leadership', 'Public Speaking'],
+          interestedCount: 152,
           posterId: 'u_admin',
           posterName: 'Amara Okeke',
           attendees: {'u_student', 'u_org'},
@@ -105,17 +126,13 @@ class MockData {
           text: 'All years welcome! Just bring a team or join one on the day.',
           timestamp: DateTime.now().subtract(const Duration(hours: 2)),
         ),
-      ];
-
-  static List<OrganizerRequest> requests() => [
-        OrganizerRequest(
-          id: 'r1',
-          userId: 'u_student',
-          userName: 'Liana Uwase',
-          userHouse: 'Ubuntu',
-          reason:
-              'I am starting a Women in Tech circle and want to post our '
-              'weekly sessions.',
+        Message(
+          id: 'm3',
+          opportunityId: 'o4',
+          senderId: 'u_org',
+          senderName: 'Kwame Mensah',
+          text: 'Looking forward to the talk on servant leadership!',
+          timestamp: DateTime.now().subtract(const Duration(days: 1)),
         ),
       ];
 }

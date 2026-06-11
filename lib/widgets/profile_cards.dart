@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 // summary row
 class MetricItem extends StatelessWidget {
   final String value;
@@ -17,12 +19,15 @@ class MetricItem extends StatelessWidget {
       children: [
         Text(
           value,
-          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+              color: AppTheme.textLight,
+              fontSize: 16,
+              fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(color: Colors.grey, fontSize: 11),
+          style: const TextStyle(color: AppTheme.textMuted, fontSize: 11),
         ),
       ],
     );
@@ -47,13 +52,14 @@ class CustomChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: borderColor.withOpacity(0.08),
+        color: borderColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: borderColor.withOpacity(0.4), width: 1),
+        border: Border.all(color: borderColor.withValues(alpha: 0.4), width: 1),
       ),
       child: Text(
         label,
-        style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w500),
+        style: TextStyle(
+            color: textColor, fontSize: 13, fontWeight: FontWeight.w500),
       ),
     );
   }
@@ -80,15 +86,23 @@ class DottedAddChip extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: Colors.white.withOpacity(0.2),
+            color: AppTheme.gold.withValues(alpha: 0.5),
             width: 1,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('+ ', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13, fontWeight: FontWeight.bold)),
-            Text(label, style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13, fontWeight: FontWeight.w500)),
+            const Text('+ ',
+                style: TextStyle(
+                    color: AppTheme.gold,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold)),
+            Text(label,
+                style: const TextStyle(
+                    color: AppTheme.gold,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500)),
           ],
         ),
       ),
@@ -102,6 +116,7 @@ class ActionMenuRow extends StatelessWidget {
   final Color iconColor;
   final String title;
   final String subtitle;
+  final VoidCallback? onTap;
 
   const ActionMenuRow({
     super.key,
@@ -109,36 +124,49 @@ class ActionMenuRow extends StatelessWidget {
     required this.iconColor,
     required this.title,
     required this.subtitle,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    const cardBg = Color(0xFF1E1B2E);
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(16)),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(8)),
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-              ],
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+            color: AppTheme.navySurface,
+            borderRadius: BorderRadius.circular(16)),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                  color: AppTheme.navyElevated,
+                  borderRadius: BorderRadius.circular(8)),
+              child: Icon(icon, color: iconColor, size: 20),
             ),
-          ),
-          const Icon(Icons.chevron_right, color: Colors.grey, size: 18),
-        ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(
+                          color: AppTheme.textLight,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: const TextStyle(
+                          color: AppTheme.textMuted, fontSize: 12)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppTheme.textMuted, size: 18),
+          ],
+        ),
       ),
     );
   }
@@ -148,54 +176,74 @@ class ActionMenuRow extends StatelessWidget {
 class RsvpEventCard extends StatelessWidget {
   final String title;
   final String dateText;
+  final VoidCallback? onTap;
 
   const RsvpEventCard({
     super.key,
     required this.title,
     required this.dateText,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    const cardBg = Color(0xFF1E1B2E);
-    const accentYellow = Color(0xFFFFB800);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(16)),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: accentYellow.withOpacity(0.05), borderRadius: BorderRadius.circular(8)),
-            child: const Icon(Icons.calendar_today_outlined, color: accentYellow, size: 20),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 4),
-                Text(dateText, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-              ],
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+            color: AppTheme.navySurface,
+            borderRadius: BorderRadius.circular(16)),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                  color: AppTheme.gold.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8)),
+              child: const Icon(Icons.calendar_today_outlined,
+                  color: AppTheme.gold, size: 20),
             ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(color: accentYellow, borderRadius: BorderRadius.circular(20)),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text("RSVP'd", style: TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.bold)),
-                SizedBox(width: 4),
-                Icon(Icons.check, color: Colors.black, size: 12),
-              ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(
+                          color: AppTheme.textLight,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 4),
+                  Text(dateText,
+                      style: const TextStyle(
+                          color: AppTheme.textMuted, fontSize: 12)),
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                  color: AppTheme.gold, borderRadius: BorderRadius.circular(20)),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text("RSVP'd",
+                      style: TextStyle(
+                          color: AppTheme.navy,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold)),
+                  SizedBox(width: 4),
+                  Icon(Icons.check, color: AppTheme.navy, size: 12),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -205,30 +253,37 @@ class RsvpEventCard extends StatelessWidget {
 class EditableTextField extends StatelessWidget {
   final String label;
   final TextEditingController controller;
+  final int maxLines;
 
   const EditableTextField({
     super.key,
     required this.label,
     required this.controller,
+    this.maxLines = 1,
   });
 
   @override
   Widget build(BuildContext context) {
-    const fieldBg = Color(0xFF161422);
-
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w500)),
+          Text(label,
+              style: const TextStyle(
+                  color: AppTheme.textMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500)),
           const SizedBox(height: 6),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(color: fieldBg, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+                color: AppTheme.navyElevated,
+                borderRadius: BorderRadius.circular(12)),
             child: TextField(
               controller: controller,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              maxLines: maxLines,
+              style: const TextStyle(color: AppTheme.textLight, fontSize: 14),
               decoration: const InputDecoration(
                 border: InputBorder.none,
                 isDense: true,
@@ -241,4 +296,3 @@ class EditableTextField extends StatelessWidget {
     );
   }
 }
-

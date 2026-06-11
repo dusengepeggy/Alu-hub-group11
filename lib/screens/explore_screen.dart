@@ -4,8 +4,12 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../models/opportunity.dart';
 import '../theme/app_theme.dart';
+import '../widgets/opportunity_card.dart';
+import '../widgets/opportunity_meta.dart';
 import 'opportunity_detail_screen.dart';
 
+/// Explore: a searchable feed with a featured opportunity, category filter
+/// chips and the rich opportunity cards.
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
 
@@ -26,30 +30,55 @@ class _ExploreScreenState extends State<ExploreScreen> {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final all = state.feed;
+    final all = state.feed; // already respects the active category filter
 
-    // state.feed already applies activeFilter from AppState,
-    // so we only filter by search query here
     final filtered = all.where((o) {
-      return _query.isEmpty ||
-          o.title.toLowerCase().contains(_query) ||
-          o.location.toLowerCase().contains(_query);
+      if (_query.isEmpty) return true;
+      return o.title.toLowerCase().contains(_query) ||
+          o.location.toLowerCase().contains(_query) ||
+          o.organizer.toLowerCase().contains(_query);
     }).toList();
 
-    final recommended = all.where((o) => o.isVerified).take(5).toList();
+    final showFeatured =
+        _query.isEmpty && state.activeFilter == null && all.isNotEmpty;
+
+    final user = state.currentUser;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Explore')),
-      body: Column(
-        children: [
-          // ── Search bar ──────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: TextField(
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          children: [
+            // ── Greeting ─────────────────────────────────
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Hi, ${user?.name.split(' ').first ?? 'there'} 👋',
+                    style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textLight),
+                  ),
+                ),
+                CircleAvatar(
+                  backgroundColor: AppTheme.gold,
+                  child: Text(
+                    user?.initials ?? '?',
+                    style: const TextStyle(
+                        color: AppTheme.navy, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // ── Search ───────────────────────────────────
+            TextField(
               controller: _searchController,
               onChanged: (v) => setState(() => _query = v.toLowerCase()),
               decoration: InputDecoration(
-                hintText: 'Search events, clubs, opportunities...',
+                hintText: 'Search opportunities, events…',
                 prefixIcon: const Icon(Icons.search, size: 20),
                 suffixIcon: _query.isNotEmpty
                     ? IconButton(
@@ -62,76 +91,154 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     : null,
               ),
             ),
-          ),
+            const SizedBox(height: 20),
 
-          // ── Category filter chips ───────────────────
-          SizedBox(
-            height: 48,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+            // ── Featured ─────────────────────────────────
+            if (showFeatured) ...[
+              const Row(
+                children: [
+                  Text('Featured',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold)),
+                  Spacer(),
+                  Text('🔥 Hot this week',
+                      style: TextStyle(fontSize: 12, color: AppTheme.gold)),
+                ],
+              ),
+              const SizedBox(height: 10),
+              _FeaturedCard(opportunity: all.first),
+              const SizedBox(height: 20),
+            ],
+
+            // ── Category filters ─────────────────────────
+            _FilterBar(
+              active: state.activeFilter,
+              onSelect: state.setFilter,
+            ),
+            const SizedBox(height: 8),
+
+            // ── List ─────────────────────────────────────
+            Row(
               children: [
-                _chip(context, 'All', state.activeFilter == null,
-                    () => state.setFilter(null)),
-                ...OpportunityType.values.map(
-                  (type) => _chip(
-                    context,
-                    type.label,
-                    state.activeFilter == type,
-                    () => state.setFilter(type),
-                  ),
+                const Text('Latest Opportunities',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const Spacer(),
+                Text('${filtered.length} found',
+                    style: const TextStyle(
+                        fontSize: 12, color: AppTheme.textMuted)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (filtered.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(
+                  child: Text('Nothing found.',
+                      style: TextStyle(color: AppTheme.textMuted)),
+                ),
+              )
+            else
+              for (final o in filtered) OpportunityCard(opportunity: o),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FeaturedCard extends StatelessWidget {
+  final Opportunity opportunity;
+  const _FeaturedCard({required this.opportunity});
+
+  @override
+  Widget build(BuildContext context) {
+    final o = opportunity;
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => OpportunityDetailScreen(opportunityId: o.id),
+        ),
+      ),
+      child: Container(
+        height: 150,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: LinearGradient(
+            colors: o.type.gradient,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                OpportunityTypeChip(type: o.type),
+                const Spacer(),
+                if (o.isVerified) const VerifiedBadge(),
+              ],
+            ),
+            const Spacer(),
+            Text(
+              o.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.event, size: 14, color: Colors.white70),
+                const SizedBox(width: 4),
+                Text(formatDate(o.date),
+                    style:
+                        const TextStyle(fontSize: 12, color: Colors.white70)),
+                const SizedBox(width: 12),
+                const Icon(Icons.people_outline,
+                    size: 14, color: Colors.white70),
+                const SizedBox(width: 4),
+                Text(
+                  '${o.interestedCount > 0 ? o.interestedCount : o.attendeeCount} going',
+                  style: const TextStyle(fontSize: 12, color: Colors.white70),
                 ),
               ],
             ),
-          ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-          // ── Main content ────────────────────────────
-          Expanded(
-            child: filtered.isEmpty
-                ? const Center(child: Text('Nothing found.'))
-                : ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      // Recommended section (only on "All" tab, no search)
-                      if (state.activeFilter == null &&
-                          _query.isEmpty &&
-                          recommended.isNotEmpty) ...[
-                        const Text(
-                          'Recommended for you',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          height: 160,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: recommended.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(width: 10),
-                            itemBuilder: (_, i) =>
-                                _RecommendedCard(opportunity: recommended[i]),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        const Text(
-                          'All Activity',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                      ],
+class _FilterBar extends StatelessWidget {
+  final OpportunityType? active;
+  final ValueChanged<OpportunityType?> onSelect;
 
-                      // Full list
-                      ...filtered.map(
-                        (o) => _OpportunityCard(opportunity: o),
-                      ),
-                    ],
-                  ),
+  const _FilterBar({required this.active, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 40,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          _chip(context, 'All', active == null, () => onSelect(null)),
+          ...OpportunityType.values.map(
+            (type) => _chip(
+              context,
+              type.label,
+              active == type,
+              () => onSelect(type),
+            ),
           ),
         ],
       ),
@@ -145,172 +252,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
     VoidCallback onTap,
   ) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
         label: Text(label),
         selected: selected,
         onSelected: (_) => onTap(),
-      ),
-    );
-  }
-}
-
-// ── Recommended horizontal card ──────────────────
-
-class _RecommendedCard extends StatelessWidget {
-  final Opportunity opportunity;
-  const _RecommendedCard({required this.opportunity});
-
-  @override
-  Widget build(BuildContext context) {
-    final o = opportunity;
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => OpportunityDetailScreen(opportunityId: o.id),
-        ),
-      ),
-      child: Container(
-        width: 180,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: AppTheme.gold.withOpacity(0.25),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(o.type.icon, color: AppTheme.gold, size: 22),
-            const SizedBox(height: 8),
-            Text(
-              o.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const Spacer(),
-            Row(
-              children: [
-                const Icon(Icons.location_on_outlined,
-                    size: 11, color: AppTheme.textMuted),
-                const SizedBox(width: 3),
-                Expanded(
-                  child: Text(
-                    o.location,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 11, color: AppTheme.textMuted),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── List card ────────────────────────────────────
-
-class _OpportunityCard extends StatelessWidget {
-  final Opportunity opportunity;
-  const _OpportunityCard({required this.opportunity});
-
-  @override
-  Widget build(BuildContext context) {
-    final o = opportunity;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => OpportunityDetailScreen(opportunityId: o.id),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(o.type.icon, size: 18, color: AppTheme.gold),
-                  const SizedBox(width: 6),
-                  Text(
-                    o.type.label,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (o.isVerified)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppTheme.gold.withOpacity(0.18),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.verified, size: 13, color: AppTheme.navy),
-                          SizedBox(width: 3),
-                          Text(
-                            'Verified',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppTheme.navy,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                o.title,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${o.posterName} · ${o.location}',
-                style: const TextStyle(
-                    fontSize: 13, color: AppTheme.textMuted),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.people_outline,
-                      size: 15, color: AppTheme.textMuted),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${o.attendeeCount} going',
-                    style: const TextStyle(
-                        fontSize: 12, color: AppTheme.textMuted),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
