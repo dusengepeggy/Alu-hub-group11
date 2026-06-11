@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../widgets/opportunity_card.dart';
 import '../widgets/opportunity_meta.dart';
 import 'opportunity_detail_screen.dart';
+import 'notifications_screen.dart';
 
 /// Explore: a searchable feed with a featured opportunity, category filter
 /// chips and the rich opportunity cards.
@@ -61,6 +62,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         color: AppTheme.textLight),
                   ),
                 ),
+                _NotificationBell(unreadCount: state.unreadCount),
+                const SizedBox(width: 8),
                 CircleAvatar(
                   backgroundColor: AppTheme.gold,
                   child: Text(
@@ -214,6 +217,53 @@ class _FeaturedCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Bell icon in the Feed header that opens the notifications page, with a
+/// small gold badge showing the unread count.
+class _NotificationBell extends StatelessWidget {
+  final int unreadCount;
+  const _NotificationBell({required this.unreadCount});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.notifications_outlined,
+              color: AppTheme.textLight),
+          tooltip: 'Notifications',
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+          ),
+        ),
+        if (unreadCount > 0)
+          Positioned(
+            top: 6,
+            right: 6,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+              decoration: const BoxDecoration(
+                color: AppTheme.gold,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                unreadCount > 9 ? '9+' : '$unreadCount',
+                style: const TextStyle(
+                  color: AppTheme.navy,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

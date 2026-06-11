@@ -1,6 +1,7 @@
 import '../models/user.dart';
 import '../models/opportunity.dart';
 import '../models/message.dart';
+import '../models/app_notification.dart';
 
 /// Seed data used to populate the app on first launch. Because the brief
 /// allows mock data, this lets us demo a lively, realistic feed without a
@@ -133,6 +134,121 @@ class MockData {
           senderName: 'Kwame Mensah',
           text: 'Looking forward to the talk on servant leadership!',
           timestamp: DateTime.now().subtract(const Duration(days: 1)),
+        ),
+      ];
+
+  static List<AppNotification> notifications() => [
+        AppNotification(
+          id: 'n1',
+          userId: 'u_student',
+          type: NotificationType.message,
+          title: 'New reply from Kwame Mensah',
+          body: 'All years welcome! Just bring a team or join one on the day.',
+          opportunityId: 'o1',
+          timestamp: DateTime.now().subtract(const Duration(hours: 2)),
+        ),
+        AppNotification(
+          id: 'n2',
+          userId: 'u_student',
+          type: NotificationType.rsvp,
+          title: "You're going to Ubuntu House Leadership Dinner",
+          body: 'Your RSVP is confirmed. Dinner is provided — see you there!',
+          opportunityId: 'o4',
+          timestamp: DateTime.now().subtract(const Duration(hours: 6)),
+        ),
+        AppNotification(
+          id: 'n3',
+          userId: 'u_student',
+          type: NotificationType.opportunity,
+          title: 'New internship posted',
+          body: 'Summer Internship: Fintech Analyst (Remote) — applications '
+              'close in two weeks.',
+          opportunityId: 'o3',
+          timestamp: DateTime.now().subtract(const Duration(days: 1)),
+          isRead: true,
+        ),
+        AppNotification(
+          id: 'n4',
+          userId: 'u_student',
+          type: NotificationType.opportunity,
+          title: 'Hackathon spots are filling up',
+          body: 'ALU Pan-African Hackathon 2026 — 89 people are interested. '
+              'RSVP to secure your place.',
+          opportunityId: 'o1',
+          timestamp: DateTime.now().subtract(const Duration(days: 2)),
+          isRead: true,
+        ),
+        AppNotification(
+          id: 'n5',
+          userId: 'u_student',
+          type: NotificationType.system,
+          title: 'Welcome to ALU Hub 🎉',
+          body: 'Discover events, internships and teammates. Tap the bell '
+              'anytime to catch up on activity.',
+          timestamp: DateTime.now().subtract(const Duration(days: 3)),
+          isRead: true,
+        ),
+
+        // --- Kwame Mensah (u_org): organiser of the hackathon & workshop ---
+        AppNotification(
+          id: 'n6',
+          userId: 'u_org',
+          type: NotificationType.message,
+          title: 'New question on your Hackathon',
+          body: 'Liana Uwase: Can first-years join, or is it upper-years only?',
+          opportunityId: 'o1',
+          timestamp: DateTime.now().subtract(const Duration(hours: 3)),
+        ),
+        AppNotification(
+          id: 'n7',
+          userId: 'u_org',
+          type: NotificationType.rsvp,
+          title: 'Liana Uwase RSVP\'d to your Hackathon',
+          body: 'ALU Pan-African Hackathon 2026 now has a new attendee.',
+          opportunityId: 'o1',
+          timestamp: DateTime.now().subtract(const Duration(hours: 5)),
+        ),
+        AppNotification(
+          id: 'n8',
+          userId: 'u_org',
+          type: NotificationType.opportunity,
+          title: 'Your workshop is trending',
+          body: 'Product Design Workshop: Figma to Flutter — 34 people are '
+              'interested.',
+          opportunityId: 'o2',
+          timestamp: DateTime.now().subtract(const Duration(days: 1)),
+          isRead: true,
+        ),
+
+        // --- Amara Okeke (u_admin): Student Life coordinator / moderator ---
+        AppNotification(
+          id: 'n9',
+          userId: 'u_admin',
+          type: NotificationType.system,
+          title: 'Moderation: review new posts',
+          body: 'New opportunities were posted today. Verify them to keep the '
+              'feed trustworthy.',
+          timestamp: DateTime.now().subtract(const Duration(hours: 1)),
+        ),
+        AppNotification(
+          id: 'n10',
+          userId: 'u_admin',
+          type: NotificationType.rsvp,
+          title: 'Ubuntu House Leadership Dinner filling up',
+          body: '152 students are interested in the dinner you organised.',
+          opportunityId: 'o4',
+          timestamp: DateTime.now().subtract(const Duration(hours: 8)),
+        ),
+        AppNotification(
+          id: 'n11',
+          userId: 'u_admin',
+          type: NotificationType.opportunity,
+          title: 'Internship applications open',
+          body: 'Summer Internship: Fintech Analyst (Remote) has 209 interested '
+              'students.',
+          opportunityId: 'o3',
+          timestamp: DateTime.now().subtract(const Duration(days: 2)),
+          isRead: true,
         ),
       ];
 }

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../models/opportunity.dart';
 import '../models/message.dart';
+import '../models/app_notification.dart';
 import '../data/mock_data.dart';
 
 /// AppState is the single source of truth for the whole app.
@@ -25,6 +26,7 @@ class AppState extends ChangeNotifier {
   final List<User> _users = MockData.users();
   final List<Opportunity> _opportunities = MockData.opportunities();
   final List<Message> _messages = MockData.messages();
+  final List<AppNotification> _notifications = MockData.notifications();
 
   User? _currentUser;
   OpportunityType? _activeFilter; // null == show all types
@@ -99,6 +101,48 @@ class AppState extends ChangeNotifier {
       if (last == null || m.timestamp.isAfter(last.timestamp)) last = m;
     }
     return last;
+  }
+
+  // --- Notifications ---
+
+  /// The current user's notifications, newest first.
+  List<AppNotification> get notifications {
+    final id = _currentUser?.id;
+    if (id == null) return [];
+    final list = _notifications.where((n) => n.userId == id).toList();
+    list.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return list;
+  }
+
+  /// Number of unread notifications for the current user (backs the bell badge).
+  int get unreadCount =>
+      notifications.where((n) => !n.isRead).length;
+
+  /// Mark a single notification as read.
+  void markRead(String id) {
+    for (final n in _notifications) {
+      if (n.id == id) {
+        if (!n.isRead) {
+          n.isRead = true;
+          notifyListeners();
+        }
+        return;
+      }
+    }
+  }
+
+  /// Mark every notification for the current user as read.
+  void markAllRead() {
+    final id = _currentUser?.id;
+    if (id == null) return;
+    var changed = false;
+    for (final n in _notifications) {
+      if (n.userId == id && !n.isRead) {
+        n.isRead = true;
+        changed = true;
+      }
+    }
+    if (changed) notifyListeners();
   }
 
   /// Suggested teammates: other users who are open to teammates or share a
