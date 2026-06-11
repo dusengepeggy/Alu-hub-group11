@@ -1,7 +1,6 @@
 import '../models/user.dart';
 import '../models/opportunity.dart';
 import '../models/message.dart';
-import '../models/organizer_request.dart';
 
 /// Seed data used to populate the app on first launch. Because the brief
 /// allows mock data, this lets us demo a lively, realistic feed without a
@@ -11,32 +10,29 @@ class MockData {
         User(
           id: 'u_admin',
           name: 'Amara Okeke',
-          email: 'admin@alu.edu',
+          email: 'amara@alustudent.com',
           house: 'Ubuntu',
           campus: 'Kigali, Rwanda',
           bio: 'Student Life coordinator. Keeps the feed trustworthy.',
-          role: UserRole.admin,
           skills: ['Operations', 'Community', 'Public Speaking'],
         ),
         User(
           id: 'u_org',
           name: 'Kwame Mensah',
-          email: 'kwame@alu.edu',
+          email: 'kwame@alustudent.com',
           house: 'Imagine',
           campus: 'Kigali, Rwanda',
           bio: 'President, ALU Robotics Club.',
-          role: UserRole.organizer,
           skills: ['Python', 'Machine Learning', 'Flutter'],
         ),
         User(
           id: 'u_student',
           name: 'Liana Uwase',
-          email: 'liana@alu.edu',
+          email: 'liana@alustudent.com',
           house: 'Ubuntu',
           campus: 'Kigali, Rwanda',
           bio: 'Passionate about building tech for Africa. '
               'Love hackathons and impact-driven startups.',
-          role: UserRole.student,
           skills: ['UI/UX', 'Figma', 'Product Management'],
           seekingRoles: ['Backend Dev', 'Product Manager', 'Designer'],
           lookingForTeammates: true,
@@ -137,18 +133,6 @@ class MockData {
           senderName: 'Kwame Mensah',
           text: 'Looking forward to the talk on servant leadership!',
           timestamp: DateTime.now().subtract(const Duration(days: 1)),
-        ),
-      ];
-
-  static List<OrganizerRequest> requests() => [
-        OrganizerRequest(
-          id: 'r1',
-          userId: 'u_student',
-          userName: 'Liana Uwase',
-          userHouse: 'Ubuntu',
-          reason:
-              'I am starting a Women in Tech circle and want to post our '
-              'weekly sessions.',
         ),
       ];
 }

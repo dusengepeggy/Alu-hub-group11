@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
-import '../models/user.dart';
 import '../theme/app_theme.dart';
+import '../widgets/screen_header.dart';
 
 /// Skill-based teammate matching: lists other users who are open to teammates
 /// or share a skill with the current user.
@@ -18,8 +18,15 @@ class FindTeammatesScreen extends StatelessWidget {
     final mySkills = me?.skills.map((s) => s.toLowerCase()).toSet() ?? {};
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Find Teammates')),
-      body: teammates.isEmpty
+      body: SafeArea(
+        child: Column(
+          children: [
+            ScreenHeader(
+              title: 'Find Teammates',
+              onBack: () => Navigator.pop(context),
+            ),
+            Expanded(
+              child: teammates.isEmpty
           ? const Center(
               child: Padding(
                 padding: EdgeInsets.all(32),
@@ -65,7 +72,7 @@ class FindTeammatesScreen extends StatelessWidget {
                                     style: const TextStyle(
                                         fontWeight: FontWeight.bold)),
                                 Text(
-                                  '${u.campus.isNotEmpty ? u.campus : u.house} · ${u.role.label}',
+                                  u.campus.isNotEmpty ? u.campus : u.house,
                                   style: const TextStyle(
                                       fontSize: 12,
                                       color: AppTheme.textMuted),
@@ -94,6 +101,10 @@ class FindTeammatesScreen extends StatelessWidget {
                   ),
               ],
             ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

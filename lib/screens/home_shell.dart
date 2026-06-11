@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../state/app_state.dart';
-import '../models/user.dart';
 import '../widgets/app_bottom_nav.dart';
-import 'feed_screen.dart';
 import 'explore_screen.dart';
 import 'my_events_screen.dart';
-import 'admin_panel_screen.dart';
 import 'create_opportunity_screen.dart';
-import 'profile_screen.dart';
-import 'message_screen.dart';
+import 'profile.dart';
+import 'chats.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -24,29 +19,24 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AppState>().currentUser;
-    final role = user?.role ?? UserRole.student;
-
-    // Layout matches the reference design (Explore · 2nd · [+] · Chats · Profile).
-    // The 2nd slot is role-respective and the center "+" is for posters only.
+    // Layout: Feed · My Events · [+] · Chats · Profile.
+    // Any signed-in ALU member can post, so the center "+" is always shown.
     final tabs = <_NavTab>[
-      _NavTab(const FeedScreen(), Icons.explore_outlined, 'Feed'),
-      _NavTab(const ExploreScreen(), Icons.search_outlined, 'Explore'),
+      _NavTab(const ExploreScreen(), Icons.explore_outlined, 'Feed'),
       _NavTab(const MyEventsScreen(), Icons.event_available_outlined, 'My Events'),
-      if (role.canPost)
-        _NavTab(
-          const CreateOpportunityScreen(),
-          Icons.add,
-          'Post',
-          isCreate: true,
-        ),
       _NavTab(
-        const MessageScreen(),
+        const CreateOpportunityScreen(),
+        Icons.add,
+        'Post',
+        isCreate: true,
+      ),
+      _NavTab(
+        const ChatsPage(),
         Icons.chat_bubble_outline,
         'Chats',
       ),
       _NavTab(
-        const ProfileScreen(),
+        const ProfilePage(),
         Icons.person_outline,
         'Profile',
       ),

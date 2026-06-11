@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
+import '../models/opportunity.dart';
+import '../models/message.dart';
 import '../theme/app_theme.dart';
 
 class OpportunityDetailScreen extends StatefulWidget {
@@ -26,10 +28,9 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
 
-    // Safe lookup across feed and myEvents
-    final o = [...state.feed, ...state.myEvents]
-        .cast<dynamic>()
-        .firstWhere((e) => e.id == widget.opportunityId, orElse: () => null);
+    // Resolve the event by id across ALL opportunities, so the detail page
+    // works regardless of the active feed filter or RSVP state.
+    final o = state.opportunityById(widget.opportunityId);
 
     if (o == null) {
       return Scaffold(
@@ -39,6 +40,7 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen> {
     }
 
     final messages = state.messagesFor(o.id);
+    final meId = state.currentUser?.id;
 
     return Scaffold(
       appBar: AppBar(title: Text(o.title)),
@@ -127,27 +129,8 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen> {
                     ),
                   )
                 else
-                  ...messages.map((msg) => Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.navyElevated,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(msg.senderName ?? 'Student',
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.gold)),
-                            const SizedBox(height: 4),
-                            Text(msg.text ?? '',
-                                style: const TextStyle(fontSize: 13)),
-                          ],
-                        ),
-                      )),
+                  ...messages
+                      .map((msg) => _bubble(context, msg, msg.senderId == meId)),
               ],
             ),
           ),
@@ -190,6 +173,67 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen> {
       ),
     );
   }
+
+  /// A single chat bubble: right-aligned + gold for the current user,
+  /// left-aligned + dark for everyone else.
+  Widget _bubble(BuildContext context, Message msg, bool isMine) {
+    final maxWidth = MediaQuery.of(context).size.width * 0.75;
+    final bubbleColor = isMine ? AppTheme.gold : AppTheme.navyElevated;
+    final textColor = isMine ? AppTheme.navy : AppTheme.textLight;
+    const radius = Radius.circular(14);
+
+    return Align(
+      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: bubbleColor,
+            borderRadius: BorderRadius.only(
+              topLeft: radius,
+              topRight: radius,
+              bottomLeft: isMine ? radius : Radius.zero,
+              bottomRight: isMine ? Radius.zero : radius,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!isMine)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(msg.senderName,
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.gold)),
+                ),
+              Text(msg.text,
+                  style: TextStyle(fontSize: 13, color: textColor)),
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  _time(msg.timestamp),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isMine
+                        ? AppTheme.navy.withValues(alpha: 0.6)
+                        : AppTheme.textMuted,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _time(DateTime t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
   Widget _infoRow(IconData icon, String text) => Padding(
         padding: const EdgeInsets.only(bottom: 6),

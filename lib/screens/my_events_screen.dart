@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/opportunity_card.dart';
+import '../widgets/screen_header.dart';
 
 /// "My Events": opportunities the current user has RSVP'd to.
 class MyEventsScreen extends StatelessWidget {
@@ -13,15 +14,24 @@ class MyEventsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final events = context.watch<AppState>().myEvents;
     return Scaffold(
-      appBar: AppBar(title: const Text('My Events')),
-      body: events.isEmpty
-          ? const _EmptyState()
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                for (final o in events) OpportunityCard(opportunity: o),
-              ],
+      body: SafeArea(
+        child: Column(
+          children: [
+            const ScreenHeader(title: 'My Events'),
+            Expanded(
+              child: events.isEmpty
+                  ? const _EmptyState()
+                  : ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        for (final o in events)
+                          OpportunityCard(opportunity: o),
+                      ],
+                    ),
             ),
+          ],
+        ),
+      ),
     );
   }
 }

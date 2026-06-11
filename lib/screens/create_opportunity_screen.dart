@@ -6,6 +6,7 @@ import '../models/opportunity.dart';
 import '../data/skill_options.dart';
 import '../theme/app_theme.dart';
 import '../widgets/opportunity_meta.dart';
+import '../widgets/screen_header.dart';
 import 'posted_success_screen.dart';
 
 /// 3-step "Post an Opportunity" wizard (organizers/admins only):
@@ -140,19 +141,13 @@ class _CreateOpportunityScreenState extends State<CreateOpportunityScreen> {
       'Step 3 of 3 — Skills & Preview',
     ];
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Post an Opportunity'),
-        actions: [
-          if (_step == 0)
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () => Navigator.maybePop(context),
-            ),
-        ],
-      ),
       body: SafeArea(
         child: Column(
           children: [
+            ScreenHeader(
+              title: 'Post an Opportunity',
+              onBack: () => Navigator.maybePop(context),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: ClipRRect(
@@ -448,8 +443,8 @@ class _InfoBanner extends StatelessWidget {
           SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Who can post? Verified organizers post events and startup '
-              'initiatives. Jobs/internships are verified by ALU Career Services.',
+              'Anyone with an ALU email can post events, opportunities and '
+              'announcements for the community.',
               style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
             ),
           ),

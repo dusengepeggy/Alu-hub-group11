@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/user.dart';
 import '../models/opportunity.dart';
-import '../models/organizer_request.dart';
 import '../models/message.dart';
 import '../data/mock_data.dart';
 
@@ -25,7 +24,6 @@ class AppState extends ChangeNotifier {
 
   final List<User> _users = MockData.users();
   final List<Opportunity> _opportunities = MockData.opportunities();
-  final List<OrganizerRequest> _requests = MockData.requests();
   final List<Message> _messages = MockData.messages();
 
   User? _currentUser;
@@ -35,12 +33,6 @@ class AppState extends ChangeNotifier {
   User? get currentUser => _currentUser;
   bool get isLoggedIn => _currentUser != null;
   OpportunityType? get activeFilter => _activeFilter;
-
-  List<OrganizerRequest> get pendingRequests =>
-      _requests.where((r) => r.status == RequestStatus.pending).toList();
-
-  /// All opportunities (including flagged) — used by the admin moderation list.
-  List<Opportunity> get allOpportunities => List.unmodifiable(_opportunities);
 
   /// Every other user — used for teammate matching.
   List<User> get otherUsers =>
@@ -53,24 +45,6 @@ class AppState extends ChangeNotifier {
         .where((o) => !o.isFlagged)
         .where((o) => _activeFilter == null || o.type == _activeFilter)
         .toList();
-    list.sort((a, b) => a.date.compareTo(b.date));
-    return list;
-  }
-
-  /// Keyword search across non-flagged opportunities, matching title,
-  /// location, description and type label. An empty query returns all
-  /// non-flagged opportunities. Results are sorted soonest-first.
-  List<Opportunity> search(String query) {
-    final q = query.trim().toLowerCase();
-    final list = _opportunities.where((o) => !o.isFlagged).where((o) {
-      if (q.isEmpty) return true;
-      return o.title.toLowerCase().contains(q) ||
-          o.location.toLowerCase().contains(q) ||
-          o.description.toLowerCase().contains(q) ||
-          o.organizer.toLowerCase().contains(q) ||
-          o.type.label.toLowerCase().contains(q) ||
-          o.skills.any((s) => s.toLowerCase().contains(q));
-    }).toList();
     list.sort((a, b) => a.date.compareTo(b.date));
     return list;
   }
@@ -200,8 +174,8 @@ class AppState extends ChangeNotifier {
     if (name.trim().isEmpty || email.trim().isEmpty || password.isEmpty) {
       return 'Please fill in all required fields.';
     }
-    if (!email.contains('@')) {
-      return 'Please enter a valid email address.';
+    if (!email.trim().toLowerCase().endsWith('@alustudent.com')) {
+      return 'Please use your ALU email (@alustudent.com).';
     }
     if (campus.trim().isEmpty) {
       return 'Please select your campus.';
@@ -219,14 +193,24 @@ class AppState extends ChangeNotifier {
       house: campus.trim(),
       campus: campus.trim(),
       skills: skills ?? <String>[],
-      // Everyone starts as a student — the core of our access model.
-      role: UserRole.student,
     );
     _users.add(user);
     _currentUser = user;
     _persistUser();
     notifyListeners();
     return null;
+  }
+
+  /// Update the current user's editable identity fields (profile edit form).
+  /// Only the provided (non-null) fields are changed.
+  void updateProfile({String? name, String? bio, String? campus}) {
+    final user = _currentUser;
+    if (user == null) return;
+    if (name != null && name.trim().isNotEmpty) user.name = name.trim();
+    if (bio != null) user.bio = bio.trim();
+    if (campus != null) user.campus = campus.trim();
+    _persistUser();
+    notifyListeners();
   }
 
   /// Update the current user's skills (e.g. from onboarding or profile).
@@ -297,7 +281,7 @@ class AppState extends ChangeNotifier {
   bool hasRsvped(Opportunity o) =>
       _currentUser != null && o.attendees.contains(_currentUser!.id);
 
-  // --- Posting (organizers/admins only) ---
+  // --- Posting (any signed-in ALU member) ---
   String? createOpportunity({
     required String title,
     required OpportunityType type,
@@ -311,8 +295,8 @@ class AppState extends ChangeNotifier {
     int? spotsAvailable,
   }) {
     final user = _currentUser;
-    if (user == null || !user.role.canPost) {
-      return 'You do not have permission to post opportunities.';
+    if (user == null) {
+      return 'You must be logged in to post.';
     }
     if (title.trim().isEmpty || description.trim().isEmpty) {
       return 'Title and description are required.';
@@ -335,55 +319,6 @@ class AppState extends ChangeNotifier {
     ));
     notifyListeners();
     return null;
-  }
-
-  // --- Organizer access requests ---
-  bool currentUserHasPendingRequest() {
-    final id = _currentUser?.id;
-    if (id == null) return false;
-    return _requests.any(
-        (r) => r.userId == id && r.status == RequestStatus.pending);
-  }
-
-  String? submitOrganizerRequest(String reason) {
-    final user = _currentUser;
-    if (user == null) return 'You must be logged in.';
-    if (reason.trim().length < 10) {
-      return 'Please give a bit more detail (at least 10 characters).';
-    }
-    if (currentUserHasPendingRequest()) {
-      return 'You already have a pending request.';
-    }
-    _requests.add(OrganizerRequest(
-      id: 'r_${DateTime.now().millisecondsSinceEpoch}',
-      userId: user.id,
-      userName: user.name,
-      userHouse: user.house,
-      reason: reason.trim(),
-    ));
-    notifyListeners();
-    return null;
-  }
-
-  // --- Admin actions ---
-  void approveRequest(OrganizerRequest r) {
-    r.status = RequestStatus.approved;
-    final user = _users.firstWhere((u) => u.id == r.userId,
-        orElse: () => _currentUser!);
-    user.role = UserRole.organizer;
-    // If the approved user is the one logged in, keep their session fresh.
-    if (_currentUser?.id == user.id) _persistUser();
-    notifyListeners();
-  }
-
-  void denyRequest(OrganizerRequest r) {
-    r.status = RequestStatus.denied;
-    notifyListeners();
-  }
-
-  void toggleFlag(Opportunity o) {
-    o.isFlagged = !o.isFlagged;
-    notifyListeners();
   }
 
   // --- Chat ---

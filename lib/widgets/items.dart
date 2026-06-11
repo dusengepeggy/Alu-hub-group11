@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 /// horizontal circle avatar
 class ActiveGroupItem extends StatelessWidget {
   final String initials;
   final String name;
   final Color color;
   final int badgeCount;
+  final VoidCallback? onTap;
 
   const ActiveGroupItem({
     super.key,
@@ -13,51 +16,70 @@ class ActiveGroupItem extends StatelessWidget {
     required this.name,
     required this.color,
     this.badgeCount = 0,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // allow overlaying notification count
-          Stack(
-            clipBehavior: Clip.none,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: SizedBox(
+          width: 60,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  initials,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-              ),
-              // draw notification flag if there's unread items
-              if (badgeCount > 0)
-                Positioned(
-                  top: -4,
-                  right: -4,
-                  child: Container(
-                    padding: const EdgeInsets.all(5),
-                    decoration: const BoxDecoration(color: Color(0xFFFFB800), shape: BoxShape.circle),
+              // allow overlaying notification count
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    alignment: Alignment.center,
                     child: Text(
-                      '$badgeCount',
-                      style: const TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold),
+                      initials,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16),
                     ),
                   ),
-                ),
+                  // draw notification flag if there's unread items
+                  if (badgeCount > 0)
+                    Positioned(
+                      top: -4,
+                      right: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: const BoxDecoration(
+                            color: AppTheme.gold, shape: BoxShape.circle),
+                        child: Text(
+                          '$badgeCount',
+                          style: const TextStyle(
+                              color: AppTheme.navy,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(name,
+                  maxLines: 1,
+                  style: const TextStyle(
+                      color: AppTheme.textMuted, fontSize: 12),
+                  overflow: TextOverflow.ellipsis),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(name, style: const TextStyle(color: Colors.grey, fontSize: 12), overflow: TextOverflow.ellipsis),
-        ],
+        ),
       ),
     );
   }
@@ -108,7 +130,9 @@ class MessageCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           // highlight card border
           border: Border.all(
-            color: isSelected ? accentYellow.withOpacity(0.8) : Colors.transparent,
+            color: isSelected
+                ? accentYellow.withValues(alpha: 0.8)
+                : const Color(0x1AFFFFFF),
             width: 1.5,
           ),
         ),
@@ -122,9 +146,15 @@ class MessageCard extends StatelessWidget {
                 Container(
                   width: 48,
                   height: 48,
-                  decoration: BoxDecoration(color: avatarColor, borderRadius: BorderRadius.circular(14)),
+                  decoration: BoxDecoration(
+                      color: avatarColor,
+                      borderRadius: BorderRadius.circular(14)),
                   alignment: Alignment.center,
-                  child: Text(initials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                  child: Text(initials,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15)),
                 ),
                 if (badgeCount > 0)
                   Positioned(
@@ -132,8 +162,13 @@ class MessageCard extends StatelessWidget {
                     right: -4,
                     child: Container(
                       padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(color: accentYellow, shape: BoxShape.circle),
-                      child: Text('$badgeCount', style: const TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold)),
+                      decoration: BoxDecoration(
+                          color: accentYellow, shape: BoxShape.circle),
+                      child: Text('$badgeCount',
+                          style: const TextStyle(
+                              color: AppTheme.navy,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold)),
                     ),
                   ),
               ],
@@ -150,26 +185,42 @@ class MessageCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           title,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                          style: const TextStyle(
+                              color: AppTheme.textLight,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      Text(time, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                      Text(time,
+                          style: const TextStyle(
+                              color: AppTheme.textMuted, fontSize: 11)),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: TextStyle(color: isRead ? Colors.grey : Colors.white.withOpacity(0.8), fontSize: 13),
+                    style: TextStyle(
+                        color: isRead
+                            ? AppTheme.textMuted
+                            : AppTheme.textLight.withValues(alpha: 0.85),
+                        fontSize: 13),
                     overflow: TextOverflow.ellipsis,
                   ),
                   // show optional group member tags if present
                   if (tagText != null) ...[
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(color: const Color(0xFF2C2514), borderRadius: BorderRadius.circular(6)),
-                      child: Text(tagText!, style: TextStyle(color: accentYellow, fontSize: 11, fontWeight: FontWeight.w500)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                          color: AppTheme.navyElevated,
+                          borderRadius: BorderRadius.circular(6)),
+                      child: Text(tagText!,
+                          style: TextStyle(
+                              color: accentYellow,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500)),
                     ),
                   ],
                 ],
@@ -181,4 +232,3 @@ class MessageCard extends StatelessWidget {
     );
   }
 }
-
