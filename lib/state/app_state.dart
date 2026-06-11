@@ -39,6 +39,13 @@ class AppState extends ChangeNotifier {
   List<OrganizerRequest> get pendingRequests =>
       _requests.where((r) => r.status == RequestStatus.pending).toList();
 
+  /// All opportunities (including flagged) — used by the admin moderation list.
+  List<Opportunity> get allOpportunities => List.unmodifiable(_opportunities);
+
+  /// Every other user — used for teammate matching.
+  List<User> get otherUsers =>
+      _users.where((u) => u.id != _currentUser?.id).toList();
+
   /// The feed: never shows flagged posts, applies the active type filter,
   /// and sorts soonest-first so the next thing happening is on top.
   List<Opportunity> get feed {
@@ -50,6 +57,24 @@ class AppState extends ChangeNotifier {
     return list;
   }
 
+  /// Keyword search across non-flagged opportunities, matching title,
+  /// location, description and type label. An empty query returns all
+  /// non-flagged opportunities. Results are sorted soonest-first.
+  List<Opportunity> search(String query) {
+    final q = query.trim().toLowerCase();
+    final list = _opportunities.where((o) => !o.isFlagged).where((o) {
+      if (q.isEmpty) return true;
+      return o.title.toLowerCase().contains(q) ||
+          o.location.toLowerCase().contains(q) ||
+          o.description.toLowerCase().contains(q) ||
+          o.organizer.toLowerCase().contains(q) ||
+          o.type.label.toLowerCase().contains(q) ||
+          o.skills.any((s) => s.toLowerCase().contains(q));
+    }).toList();
+    list.sort((a, b) => a.date.compareTo(b.date));
+    return list;
+  }
+
   /// Opportunities the current user has RSVP'd to ("My Events").
   List<Opportunity> get myEvents {
     final id = _currentUser?.id;
@@ -57,6 +82,63 @@ class AppState extends ChangeNotifier {
     final list =
         _opportunities.where((o) => o.attendees.contains(id)).toList();
     list.sort((a, b) => a.date.compareTo(b.date));
+    return list;
+  }
+
+  /// Opportunities the current user has bookmarked ("Saved").
+  List<Opportunity> get savedOpportunities {
+    final user = _currentUser;
+    if (user == null) return [];
+    return _opportunities
+        .where((o) => user.savedOpportunityIds.contains(o.id))
+        .toList();
+  }
+
+  /// Find an opportunity by id (across all, including flagged).
+  Opportunity? opportunityById(String id) {
+    for (final o in _opportunities) {
+      if (o.id == id) return o;
+    }
+    return null;
+  }
+
+  /// Opportunities that have at least one chat message, newest activity first.
+  /// These back the Messages ("Chats") conversation list.
+  List<Opportunity> get conversations {
+    final withMsgs = _opportunities.where(
+      (o) => _messages.any((m) => m.opportunityId == o.id),
+    );
+    final list = withMsgs.toList();
+    list.sort((a, b) {
+      final ta = lastMessageFor(a.id)?.timestamp;
+      final tb = lastMessageFor(b.id)?.timestamp;
+      if (ta == null || tb == null) return 0;
+      return tb.compareTo(ta);
+    });
+    return list;
+  }
+
+  Message? lastMessageFor(String opportunityId) {
+    Message? last;
+    for (final m in _messages) {
+      if (m.opportunityId != opportunityId) continue;
+      if (last == null || m.timestamp.isAfter(last.timestamp)) last = m;
+    }
+    return last;
+  }
+
+  /// Suggested teammates: other users who are open to teammates or share a
+  /// skill with the current user, ranked by number of shared skills.
+  List<User> findTeammates() {
+    final me = _currentUser;
+    if (me == null) return [];
+    final mySkills = me.skills.map((s) => s.toLowerCase()).toSet();
+    int shared(User u) =>
+        u.skills.where((s) => mySkills.contains(s.toLowerCase())).length;
+    final list = otherUsers
+        .where((u) => u.lookingForTeammates || shared(u) > 0)
+        .toList();
+    list.sort((a, b) => shared(b).compareTo(shared(a)));
     return list;
   }
 
@@ -111,14 +193,18 @@ class AppState extends ChangeNotifier {
   String? signUp({
     required String name,
     required String email,
-    required String house,
+    required String campus,
     required String password,
+    List<String>? skills,
   }) {
     if (name.trim().isEmpty || email.trim().isEmpty || password.isEmpty) {
       return 'Please fill in all required fields.';
     }
     if (!email.contains('@')) {
       return 'Please enter a valid email address.';
+    }
+    if (campus.trim().isEmpty) {
+      return 'Please select your campus.';
     }
     final exists = _users.any(
         (u) => u.email.toLowerCase() == email.trim().toLowerCase());
@@ -129,7 +215,10 @@ class AppState extends ChangeNotifier {
       id: 'u_${DateTime.now().millisecondsSinceEpoch}',
       name: name.trim(),
       email: email.trim(),
-      house: house,
+      // We use the chosen campus as the user's house/campus identity.
+      house: campus.trim(),
+      campus: campus.trim(),
+      skills: skills ?? <String>[],
       // Everyone starts as a student — the core of our access model.
       role: UserRole.student,
     );
@@ -138,6 +227,47 @@ class AppState extends ChangeNotifier {
     _persistUser();
     notifyListeners();
     return null;
+  }
+
+  /// Update the current user's skills (e.g. from onboarding or profile).
+  void updateSkills(List<String> skills) {
+    final user = _currentUser;
+    if (user == null) return;
+    user.skills
+      ..clear()
+      ..addAll(skills);
+    _persistUser();
+    notifyListeners();
+  }
+
+  /// Update who the current user is looking for in teammates.
+  void setSeekingRoles(List<String> roles, {bool? lookingForTeammates}) {
+    final user = _currentUser;
+    if (user == null) return;
+    user.seekingRoles
+      ..clear()
+      ..addAll(roles);
+    if (lookingForTeammates != null) {
+      user.lookingForTeammates = lookingForTeammates;
+    }
+    _persistUser();
+    notifyListeners();
+  }
+
+  // --- Saved / bookmarked opportunities ---
+  bool isSaved(Opportunity o) =>
+      _currentUser?.savedOpportunityIds.contains(o.id) ?? false;
+
+  void toggleSaved(Opportunity o) {
+    final user = _currentUser;
+    if (user == null) return;
+    if (user.savedOpportunityIds.contains(o.id)) {
+      user.savedOpportunityIds.remove(o.id);
+    } else {
+      user.savedOpportunityIds.add(o.id);
+    }
+    _persistUser();
+    notifyListeners();
   }
 
   void logout() {
@@ -174,6 +304,11 @@ class AppState extends ChangeNotifier {
     required String description,
     required DateTime date,
     required String location,
+    String organizer = '',
+    List<String>? skills,
+    DateTime? applicationDeadline,
+    int? teamSize,
+    int? spotsAvailable,
   }) {
     final user = _currentUser;
     if (user == null || !user.role.canPost) {
@@ -189,6 +324,11 @@ class AppState extends ChangeNotifier {
       description: description.trim(),
       date: date,
       location: location.trim(),
+      organizer: organizer.trim(),
+      skills: skills ?? <String>[],
+      applicationDeadline: applicationDeadline,
+      teamSize: teamSize,
+      spotsAvailable: spotsAvailable,
       posterId: user.id,
       posterName: user.name,
       isVerified: true, // posted by a verified organizer/admin

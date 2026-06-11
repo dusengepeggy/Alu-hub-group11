@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'state/app_state.dart';
 import 'theme/app_theme.dart';
-import 'screens/login_screen.dart';
+import 'screens/welcome_screen.dart';
 import 'screens/home_shell.dart';
 
 void main() {
@@ -21,7 +21,7 @@ class AluConnectApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ALU Connect',
+      title: 'ALU Hub',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark(),
       home: const AuthGate(),
@@ -40,6 +40,6 @@ class AuthGate extends StatelessWidget {
       return const HomeShell();
     }
 
-    return LoginScreen();
+    return const WelcomeScreen();
   }
 }

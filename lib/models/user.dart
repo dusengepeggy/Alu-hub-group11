@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// The three access tiers in ALU Connect.
+/// The three access tiers in ALU Hub.
 ///
 /// This enum is the heart of our "trust & access" design: everyone starts
 /// as a [student]. A student can request to become an [organizer]; an
@@ -29,18 +29,38 @@ class User {
   final String id;
   final String name;
   final String email;
-  final String house; // ALU house, e.g. "Ubuntu", "Imagine"
+  final String house; // ALU house / campus, e.g. "Ubuntu", "Kigali"
+  final String campus; // e.g. "Kigali, Rwanda"
   final String bio;
   UserRole role;
+
+  /// Skills the user has (used for teammate matching + discovery).
+  final List<String> skills;
+
+  /// Roles the user is looking for in teammates (e.g. "Backend Dev").
+  final List<String> seekingRoles;
+
+  /// Whether the user is open to being matched with teammates.
+  bool lookingForTeammates;
+
+  /// Opportunity ids the user has bookmarked/saved.
+  final Set<String> savedOpportunityIds;
 
   User({
     required this.id,
     required this.name,
     required this.email,
     required this.house,
+    this.campus = '',
     this.bio = '',
     this.role = UserRole.student,
-  });
+    List<String>? skills,
+    List<String>? seekingRoles,
+    this.lookingForTeammates = false,
+    Set<String>? savedOpportunityIds,
+  })  : skills = skills ?? <String>[],
+        seekingRoles = seekingRoles ?? <String>[],
+        savedOpportunityIds = savedOpportunityIds ?? <String>{};
 
   /// Initials used as a lightweight avatar (no image assets needed).
   String get initials {
@@ -57,8 +77,13 @@ class User {
         'name': name,
         'email': email,
         'house': house,
+        'campus': campus,
         'bio': bio,
         'role': role.name,
+        'skills': skills,
+        'seekingRoles': seekingRoles,
+        'lookingForTeammates': lookingForTeammates,
+        'savedOpportunityIds': savedOpportunityIds.toList(),
       };
 
   factory User.fromJson(Map<String, dynamic> json) => User(
@@ -66,10 +91,18 @@ class User {
         name: json['name'] as String,
         email: json['email'] as String,
         house: json['house'] as String,
+        campus: (json['campus'] as String?) ?? '',
         bio: (json['bio'] as String?) ?? '',
         role: UserRole.values.firstWhere(
           (r) => r.name == json['role'],
           orElse: () => UserRole.student,
         ),
+        skills: (json['skills'] as List?)?.cast<String>() ?? <String>[],
+        seekingRoles:
+            (json['seekingRoles'] as List?)?.cast<String>() ?? <String>[],
+        lookingForTeammates: (json['lookingForTeammates'] as bool?) ?? false,
+        savedOpportunityIds:
+            (json['savedOpportunityIds'] as List?)?.cast<String>().toSet() ??
+                <String>{},
       );
 }
